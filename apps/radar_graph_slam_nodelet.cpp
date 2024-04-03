@@ -68,7 +68,7 @@
 #include <g2o/edge_se3_priorvec.hpp>
 #include <g2o/edge_se3_priorquat.hpp>
 
-#include <barometer_bmp388/Barometer.h>
+// #include <barometer_bmp388/Barometer.h>
 
 #include "utility_radar.h"
 
@@ -145,9 +145,9 @@ public:
       nmea_sub = mt_nh.subscribe("/gpsimu_driver/nmea_sentence", 1024, &RadarGraphSlamNodelet::nmea_callback, this);
       navsat_sub = mt_nh.subscribe(gpsTopic, 1024, &RadarGraphSlamNodelet::navsat_callback, this);
     }
-    if(private_nh.param<bool>("enable_barometer", false)) {
-      barometer_sub = mt_nh.subscribe("/barometer/filtered", 16, &RadarGraphSlamNodelet::barometer_callback, this);
-    }
+    // if(private_nh.param<bool>("enable_barometer", false)) {
+    //   barometer_sub = mt_nh.subscribe("/barometer/filtered", 16, &RadarGraphSlamNodelet::barometer_callback, this);
+    // }
     if (enable_preintegration)
       imu_odom_sub = nh.subscribe("/imu_pre_integ/imu_odom_incre", 1024, &RadarGraphSlamNodelet::imu_odom_callback, this);
     imu_sub = nh.subscribe("/imu", 1024, &RadarGraphSlamNodelet::imu_callback, this);
@@ -438,83 +438,83 @@ private:
   }
 
 
-  void barometer_callback(const barometer_bmp388::BarometerPtr& baro_msg) {
-    if(!enable_barometer) {
-      return;
-    }
-    std::lock_guard<std::mutex> lock(barometer_queue_mutex);
-    barometer_queue.push_back(baro_msg);
-  }
+  // void barometer_callback(const barometer_bmp388::BarometerPtr& baro_msg) {
+  //   if(!enable_barometer) {
+  //     return;
+  //   }
+  //   std::lock_guard<std::mutex> lock(barometer_queue_mutex);
+  //   barometer_queue.push_back(baro_msg);
+  // }
 
-  bool flush_barometer_queue() {
-    std::lock_guard<std::mutex> lock(barometer_queue_mutex);
-    if(keyframes.empty() || barometer_queue.empty()) {
-      return false;
-    }
-    bool updated = false;
-    auto barometer_cursor = barometer_queue.begin();
+  // bool flush_barometer_queue() {
+  //   std::lock_guard<std::mutex> lock(barometer_queue_mutex);
+  //   if(keyframes.empty() || barometer_queue.empty()) {
+  //     return false;
+  //   }
+  //   bool updated = false;
+  //   auto barometer_cursor = barometer_queue.begin();
 
-    for(size_t i=0; i < keyframes.size(); i++) {
-      auto keyframe = keyframes.at(i);
-      if(keyframe->stamp > barometer_queue.back()->header.stamp) {
-        break;
-      }
-      if(keyframe->stamp < (*barometer_cursor)->header.stamp || keyframe->altitude) {
-        continue;
-      }
-      // find the barometer data which is closest to the keyframe_
-      auto closest_barometer = barometer_cursor;
-      for(auto baro = barometer_cursor; baro != barometer_queue.end(); baro++) {
-        auto dt = ((*closest_barometer)->header.stamp - keyframe->stamp).toSec();
-        auto dt2 = ((*baro)->header.stamp - keyframe->stamp).toSec();
-        if(std::abs(dt) < std::abs(dt2)) {
-          break;
-        }
-        closest_barometer = baro;
-      }
-      // if the time residual between the barometer and keyframe_ is too large, skip it
-      barometer_cursor = closest_barometer;
-      if(0.2 < std::abs(((*closest_barometer)->header.stamp - keyframe->stamp).toSec())) {
-        continue;
-      }
+  //   for(size_t i=0; i < keyframes.size(); i++) {
+  //     auto keyframe = keyframes.at(i);
+  //     if(keyframe->stamp > barometer_queue.back()->header.stamp) {
+  //       break;
+  //     }
+  //     if(keyframe->stamp < (*barometer_cursor)->header.stamp || keyframe->altitude) {
+  //       continue;
+  //     }
+  //     // find the barometer data which is closest to the keyframe_
+  //     auto closest_barometer = barometer_cursor;
+  //     for(auto baro = barometer_cursor; baro != barometer_queue.end(); baro++) {
+  //       auto dt = ((*closest_barometer)->header.stamp - keyframe->stamp).toSec();
+  //       auto dt2 = ((*baro)->header.stamp - keyframe->stamp).toSec();
+  //       if(std::abs(dt) < std::abs(dt2)) {
+  //         break;
+  //       }
+  //       closest_barometer = baro;
+  //     }
+  //     // if the time residual between the barometer and keyframe_ is too large, skip it
+  //     barometer_cursor = closest_barometer;
+  //     if(0.2 < std::abs(((*closest_barometer)->header.stamp - keyframe->stamp).toSec())) {
+  //       continue;
+  //     }
 
-      Eigen::Vector4d aftmapped_pos(keyframe->odom_scan2scan.translation().x(), keyframe->odom_scan2scan.translation().y(), (*closest_barometer)->altitude, 1.0);
-      aftmapped_pos = initial_pose * aftmapped_pos;
-      // std::cout << "baro position: " << aftmapped_pos(0) << ", " << aftmapped_pos(1) << ", " << aftmapped_pos(2) << std::endl;
+  //     Eigen::Vector4d aftmapped_pos(keyframe->odom_scan2scan.translation().x(), keyframe->odom_scan2scan.translation().y(), (*closest_barometer)->altitude, 1.0);
+  //     aftmapped_pos = initial_pose * aftmapped_pos;
+  //     // std::cout << "baro position: " << aftmapped_pos(0) << ", " << aftmapped_pos(1) << ", " << aftmapped_pos(2) << std::endl;
       
-      nav_msgs::Odometry initial_odom; // Initial posture
-      initial_odom = matrix2odom(keyframe->stamp, initial_pose, mapFrame, baselinkFrame);
+  //     nav_msgs::Odometry initial_odom; // Initial posture
+  //     initial_odom = matrix2odom(keyframe->stamp, initial_pose, mapFrame, baselinkFrame);
 
-      Eigen::Vector1d z(aftmapped_pos(2));
-      // the first barometer data position will be the origin of the map
-      if(!zero_alt) {
-        zero_alt = z;
-      }
-      z -= (*zero_alt);
-      keyframe->altitude = z;
+  //     Eigen::Vector1d z(aftmapped_pos(2));
+  //     // the first barometer data position will be the origin of the map
+  //     if(!zero_alt) {
+  //       zero_alt = z;
+  //     }
+  //     z -= (*zero_alt);
+  //     keyframe->altitude = z;
 
-      if (enable_barometer){ 
-        //********** G2O Edge *********** 
-        if (barometer_edge_type == 1){
-          g2o::OptimizableGraph::Edge* edge;
-          Eigen::Vector1d information_matrix = Eigen::Vector1d::Identity() / barometer_edge_stddev;
-          edge = graph_slam->add_se3_prior_z_edge(keyframe->node, z, information_matrix);
-          graph_slam->add_robust_kernel(edge, private_nh.param<std::string>("barometer_edge_robust_kernel", "NONE"), private_nh.param<double>("barometer_edge_robust_kernel_size", 1.0));
-        }
-        else if (barometer_edge_type == 2 && i != 0 && keyframes.at(i-1)->altitude.is_initialized()){
-          g2o::OptimizableGraph::Edge* edge;
-          Eigen::Vector1d information_matrix = Eigen::Vector1d::Identity() / barometer_edge_stddev;
-          Eigen::Vector1d relative_z(keyframe->altitude.value() - keyframes.at(i-1)->altitude.value());
-          edge = graph_slam->add_se3_z_edge(keyframe->node, keyframes.at(i-1)->node, relative_z, information_matrix);
-          graph_slam->add_robust_kernel(edge, private_nh.param<std::string>("barometer_edge_robust_kernel", "NONE"), private_nh.param<double>("barometer_edge_robust_kernel_size", 1.0));
-        }
-      }
-      updated = true;
-    }
-    auto remove_loc = std::upper_bound(barometer_queue.begin(), barometer_queue.end(), keyframes.back()->stamp, [=](const ros::Time& stamp, const barometer_bmp388::BarometerConstPtr& baropoint) { return stamp < baropoint->header.stamp; });
-    barometer_queue.erase(barometer_queue.begin(), remove_loc);
-    return updated;
-  }
+  //     if (enable_barometer){ 
+  //       //********** G2O Edge *********** 
+  //       if (barometer_edge_type == 1){
+  //         g2o::OptimizableGraph::Edge* edge;
+  //         Eigen::Vector1d information_matrix = Eigen::Vector1d::Identity() / barometer_edge_stddev;
+  //         edge = graph_slam->add_se3_prior_z_edge(keyframe->node, z, information_matrix);
+  //         graph_slam->add_robust_kernel(edge, private_nh.param<std::string>("barometer_edge_robust_kernel", "NONE"), private_nh.param<double>("barometer_edge_robust_kernel_size", 1.0));
+  //       }
+  //       else if (barometer_edge_type == 2 && i != 0 && keyframes.at(i-1)->altitude.is_initialized()){
+  //         g2o::OptimizableGraph::Edge* edge;
+  //         Eigen::Vector1d information_matrix = Eigen::Vector1d::Identity() / barometer_edge_stddev;
+  //         Eigen::Vector1d relative_z(keyframe->altitude.value() - keyframes.at(i-1)->altitude.value());
+  //         edge = graph_slam->add_se3_z_edge(keyframe->node, keyframes.at(i-1)->node, relative_z, information_matrix);
+  //         graph_slam->add_robust_kernel(edge, private_nh.param<std::string>("barometer_edge_robust_kernel", "NONE"), private_nh.param<double>("barometer_edge_robust_kernel_size", 1.0));
+  //       }
+  //     }
+  //     updated = true;
+  //   }
+  //   auto remove_loc = std::upper_bound(barometer_queue.begin(), barometer_queue.end(), keyframes.back()->stamp, [=](const ros::Time& stamp, const barometer_bmp388::BarometerConstPtr& baropoint) { return stamp < baropoint->header.stamp; });
+  //   barometer_queue.erase(barometer_queue.begin(), remove_loc);
+  //   return updated;
+  // }
 
   /**
    * @brief this method adds all the keyframes_ in #keyframe_queue to the pose graph (odometry edges)
@@ -626,9 +626,9 @@ private:
       read_until_pub.publish(read_until);
     }
 
-    if(!keyframe_updated & !flush_gps_queue() & !flush_barometer_queue()) {
-      return;
-    }
+    // if(!keyframe_updated & !flush_gps_queue() & !flush_barometer_queue()) {
+    //   return;
+    // }
     
     // loop detection
     if(private_nh.param<bool>("enable_loop_closure", false)){
@@ -1300,7 +1300,7 @@ private:
   double barometer_edge_stddev;
   boost::optional<Eigen::Vector1d> zero_alt;
   std::mutex barometer_queue_mutex;
-  std::deque<barometer_bmp388::BarometerConstPtr> barometer_queue;
+  // std::deque<barometer_bmp388::BarometerConstPtr> barometer_queue;
 
   // gps queue
   int gps_edge_intervals;
