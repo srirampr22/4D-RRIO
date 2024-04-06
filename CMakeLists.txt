@@ -102,7 +102,7 @@ include_directories(
 
 # nodelets
 add_library(preprocessing_nodelet
-  apps/preprocessing_nodelet.cpp
+  apps/radar_preprocessing.cpp
   src/radar_ego_velocity_estimator.cpp
   #src/lib/radar_body_velocity_estimator.cpp
   #src/lib/radar_body_velocity_estimator_ros.cpp

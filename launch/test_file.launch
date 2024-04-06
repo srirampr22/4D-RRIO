@@ -11,7 +11,7 @@
   <arg name="barometer_edge_type" default="1" /> <!-- not used -->
   <arg name="enable_gps" default="false" />
   <arg name="enable_dynamic_object_removal" default="false" />
-  <arg name="enable_frontend_ego_vel" default="false" />
+  <arg name="enable_frontend_ego_vel" default="True" />
   <arg name="enable_preintegration" default="false" /> <!-- not used -->
 
   <arg name="keyframe_delta_trans_front_end" default="0.5" />
@@ -33,7 +33,7 @@
   <arg name="enable_robot_odometry_init_guess" default="false" /> <!-- not used -->
 
   <!-- transformation between lidar and base_link -->
-  <!-- <node pkg="tf" type="static_transform_publisher" name="lidar2base_publisher" args="0 0 0 0 0 0 base_link velodyne 10" /> -->
+  <node pkg="tf" type="static_transform_publisher" name="lidar2base_publisher" args="0 0 0 0 0 0 base_link velodyne 10" />
   
   <node pkg="nodelet" type="nodelet" name="$(arg nodelet_manager)" args="manager" output="screen"/>
 
@@ -65,54 +65,17 @@
   </node>
 
 
-  <!-- scan_matching_odometry_nodelet -->
-  <node pkg="nodelet" type="nodelet" name="scan_matching_odometry_nodelet" args="load radar_graph_slam/ScanMatchingOdometryNodelet $(arg nodelet_manager)">
-    <param name="keyframe_delta_trans" value="$(arg keyframe_delta_trans_front_end)" />
-    <param name="keyframe_delta_angle" value="$(arg keyframe_delta_angle)" /> 
-    <param name="keyframe_min_size" value="100" />
-    <param name="enable_robot_odometry_init_guess" value="$(arg enable_robot_odometry_init_guess)" />
-    <param name="enable_transform_thresholding" value="$(arg enable_transform_thresholding)" />
-    <param name="enable_imu_thresholding" value="false" /> <!-- bad effect, not used -->
-    <param name="max_acceptable_trans" value="1.0" />
-    <param name="max_acceptable_angle" value="3" /><!-- degree -->
-    <param name="max_diff_trans" value="0.3" />
-    <param name="max_diff_angle" value="0.8" />
-    <param name="max_egovel_cum" value="1" /><!-- 12m/s -->
-    <param name="downsample_method" value="NONE" />
-    <param name="downsample_resolution" value="0.1" />
-    <!-- ICP, GICP, NDT, GICP_OMP, NDT_OMP, FAST_GICP(recommended), or FAST_VGICP -->
-    <param name="registration_method" value="$(arg registration_method)" />
-    <param name="dist_var" value="$(arg dist_var)" /><!--  -->
-    <param name="azimuth_var" value="$(arg azimuth_var)" /><!--  -->
-    <param name="elevation_var" value="$(arg elevation_var)" /><!--  -->
-    <param name="reg_num_threads" value="0" />
-    <param name="reg_transformation_epsilon" value="0.1"/>
-    <param name="reg_maximum_iterations" value="64"/>
-    <param name="reg_max_correspondence_distance" value="2.0"/>
-    <param name="reg_max_optimizer_iterations" value="20"/>
-    <param name="reg_use_reciprocal_correspondences" value="false"/>
-    <param name="reg_correspondence_randomness" value="20"/>
-    <param name="reg_resolution" value="$(arg reg_resolution)" />
-    <param name="reg_nn_search_method" value="DIRECT7" />
-    <param name="use_ego_vel" value="$(arg enable_frontend_ego_vel)"/>
-    <param name="max_submap_frames" value="5"/>
-    <param name="enable_scan_to_map" value="false"/>
-    <!-- IMU --> <!-- bad effect, not used -->
-    <param name="enable_imu_fusion" value="false" />
-    <param name="imu_debug_out" value="true" />
-    <param name="imu_fusion_ratio" value="0.1" />
-  </node>
+  
 
 
-
-  <!-- <node pkg="rviz" type="rviz" name="rviz_slam" args="-d $(find radar_graph_slam)/rviz/radar_graph_slam.rviz" respawn="true"/> -->
+  <node pkg="rviz" type="rviz" name="rviz_slam" args="-d $(find radar_graph_slam)/rviz/radar_graph_slam.rviz" respawn="true"/>
 
   <!--- Rosbag Play -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_carpark1.launch" /> -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_carpark3.launch" /> -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_garden.launch" /> -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_nanyanglink.launch" /> -->
-  <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_ntuloop1.launch" /> -->
+  <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_ntuloop1.launch" />
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_ntuloop2.launch" /> -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_ntuloop3.launch" /> -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_smoke.launch" /> -->
