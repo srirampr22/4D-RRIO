@@ -35,7 +35,7 @@ pcl::Registration<pcl::PointXYZI, pcl::PointXYZI>::Ptr select_registration_metho
     gicp->setCorrespondenceRandomness(pnh.param<int>("reg_correspondence_randomness", 20));
     return gicp;
   }
-  else if(registration_method == "FAST_APDGICP") {
+  if(registration_method == "FAST_APDGICP") {
     std::cout << "registration: FAST_APDGICP" << std::endl;
     fast_gicp::FastAPDGICP<PointT, PointT>::Ptr apdgicp(new fast_gicp::FastAPDGICP<PointT, PointT>());
     apdgicp->setNumThreads(pnh.param<int>("reg_num_threads", 0));

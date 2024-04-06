@@ -11,6 +11,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
 # pcl 1.7 causes a segfault when it is built with debug mode
 set(CMAKE_BUILD_TYPE "RELEASE")
 
+include_directories(/home/sriram/4D_RIS_ws/src/fast_apdgicp/include)
+
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
@@ -27,7 +29,7 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   # rosopencv
 )
-catkin_python_setup()
+# catkin_python_setup()
 
 find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
