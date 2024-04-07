@@ -193,14 +193,14 @@
     <param name="show_sphere" value="false" />
   </node>
 
-  <!-- <node pkg="rviz" type="rviz" name="rviz_slam" args="-d $(find radar_graph_slam)/rviz/radar_graph_slam.rviz" respawn="true"/> -->
+  <node pkg="rviz" type="rviz" name="rviz_slam" args="-d $(find radar_graph_slam)/rviz/radar_graph_slam.rviz" respawn="true"/>
 
   <!--- Rosbag Play -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_carpark1.launch" /> -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_carpark3.launch" /> -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_garden.launch" /> -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_nanyanglink.launch" /> -->
-  <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_ntuloop1.launch" /> -->
+  <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_ntuloop1.launch" />
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_ntuloop2.launch" /> -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_ntuloop3.launch" /> -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_smoke.launch" /> -->
