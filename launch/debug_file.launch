@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Parameters -->
+  <rosparam file="$(find radar_graph_slam)/config/params.yaml" command="load" />
+  <param name="use_sim_time" value="true"/>
+  
+  <!-- <arg name="nodelet_manager" default="radarslam_nodelet_manager" />
+  <arg name="enable_floor_detection" default="false" />
+  <arg name="enable_barometer" default="false" /> 
+  <arg name="barometer_edge_type" default="1" /> 
+  <arg name="enable_gps" default="false" />
+  <arg name="enable_dynamic_object_removal" default="false" />
+  <arg name="enable_frontend_ego_vel" default="True" />
+  <arg name="enable_preintegration" default="false" /> 
+
+  <arg name="keyframe_delta_trans_front_end" default="0.5" />
+  <arg name="keyframe_delta_trans_back_end" default="2" />
+  <arg name="keyframe_delta_angle" default="0.2612" />
+
+  <arg name="enable_transform_thresholding" default="true" />
+  <arg name="enable_loop_closure" default="false" />
+  <arg name="registration_method" default="FAST_APDGICP" />
+  <arg name="reg_resolution" default="1.0" />
+  
+  <arg name="dist_var" default="0.86" />
+  <arg name="azimuth_var" default="0.5" />
+  <arg name="elevation_var" default="1.0" />
+  <arg name="enable_robot_odometry_init_guess" default="false" />  -->
+
+  <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_ntuloop1.launch" />
+
+  <node name="imu_preintegration_node" pkg="radar_graph_slam" type="imu_preintegration_node" output="screen">
+  </node>
+
+
+
+</launch>

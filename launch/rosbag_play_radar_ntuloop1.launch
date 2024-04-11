@@ -1,9 +1,13 @@
 <launch>
   <!-- Play the radar dataset rosbag -->
+  
+
   <node name="radar_dataset_player"
         pkg="rosbag"
         type="play"
         args="/home/sriram/Documents/radar_dataset/loop1_2022-06-03_0.bag"
-        output="screen">
+        output="log">
   </node>
+
+  <node pkg="tf" type="static_transform_publisher" name="imu2radar_publisher" args="-0.3176955976234 -0.13761019052125 0.05898352725152 0.99993071 -0.01075143 -0.00410886 -0.00247005 map imu_frame 100" />
 </launch>
