@@ -123,6 +123,8 @@ add_library(scan_matching_odometry_nodelet
 target_link_libraries(scan_matching_odometry_nodelet
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+  ${Boost_LIBRARIES}
 )
 add_dependencies(scan_matching_odometry_nodelet ${PROJECT_NAME}_gencpp)
 
@@ -150,8 +152,25 @@ target_link_libraries(radar_graph_slam_nodelet
   ${G2O_SOLVER_CHOLMOD}   # be aware of that cholmod is released under GPL
   ${G2O_TYPES_SLAM3D}
   ${G2O_TYPES_SLAM3D_ADDONS}
+  ${OpenCV_LIBRARIES}
+  ${Boost_LIBRARIES}
 )
 add_dependencies(radar_graph_slam_nodelet ${PROJECT_NAME}_gencpp)
+
+add_executable(imu_preintegration_node src/imu_preintegration.cpp )
+target_link_libraries(imu_preintegration_node ${Boost_LIBRARIES} ${catkin_LIBRARIES} ${PCL_LIBRARIES} gtsam)
+
+add_executable(scan_matching_odometry_node src/scan_matching_odometry_node.cpp src/radar_graph_slam/registrations.cpp src/radar_graph_slam/keyframe.cpp src/g2o/robust_kernel_io.cpp)
+target_link_libraries(scan_matching_odometry_node ${Boost_LIBRARIES} ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES}
+  ${G2O_TYPES_DATA}
+  ${G2O_CORE_LIBRARY}
+  ${G2O_STUFF_LIBRARY}
+  ${G2O_SOLVER_PCG}
+  ${G2O_SOLVER_CSPARSE}   # be aware of that CSPARSE is released under LGPL
+  ${G2O_SOLVER_CHOLMOD}   # be aware of that cholmod is released under GPL
+  ${G2O_TYPES_SLAM3D}
+  ${G2O_TYPES_SLAM3D_ADDONS}
+)
 
 
 
