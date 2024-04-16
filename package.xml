@@ -2,7 +2,7 @@
 <package format="3">
   <name>radar_graph_slam</name>
   <version>0.0.0</version>
-  <description>The radar_graph_slam package</description>
+  <description>4D radar interial odometry package</description>
 
   <maintainer email="srirampr@umich.edu">srirampr</maintainer>
 
