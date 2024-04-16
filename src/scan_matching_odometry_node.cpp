@@ -84,6 +84,11 @@ public:
         points_sub.reset(new message_filters::Subscriber<sensor_msgs::PointCloud2>(nh, "/filtered_points", 32));
         sync.reset(new message_filters::Synchronizer<ApproxSyncPolicy>(ApproxSyncPolicy(32), *ego_vel_sub, *points_sub));
         sync->registerCallback(boost::bind(&ScanMatchingOdometryNode::pointcloud_callback, this, _1, _2));
+
+        // Setup publishers
+        odom_pub = nh.advertise<nav_msgs::Odometry>(odomTopic, 32);
+        aligned_points_pub = nh.advertise<sensor_msgs::PointCloud2>("/aligned_points", 32);
+        submap_pub = nh.advertise<sensor_msgs::PointCloud2>("/radar_graph_slam/submap", 2);
     }
 
     // Transfer all other methods from the Nodelet here unchanged
@@ -113,7 +118,7 @@ private:
     map_cloud_resolution = pnh.param<double>("map_cloud_resolution", 0.05);
     keyframe_updater.reset(new radar_graph_slam::KeyframeUpdater(pnh));
 
-    enable_scan_to_map = pnh.param<bool>("enable_scan_to_map", true);
+    enable_scan_to_map = pnh.param<bool>("enable_scan_to_map", false);
     max_submap_frames = pnh.param<int>("max_submap_frames", 5);
 
     enable_imu_fusion = private_nh.param<bool>("enable_imu_fusion", false);
@@ -202,7 +207,7 @@ private:
 
   void publish_odometry(const ros::Time& stamp, const std::string& father_frame_id, const std::string& child_frame_id, const Eigen::Matrix4d& pose_in, const geometry_msgs::TwistWithCovariance twist_in) {
     // publish transform stamped for IMU integration
-    geometry_msgs::TransformStamped odom_trans = radar_graph_slam::matrix2transform(stamp, pose_in, father_frame_id, child_frame_id); //"map" 
+    geometry_msgs::TransformStamped odom_trans = radar_graph_slam::matrix2transform(stamp, pose_in, mapFrame, odometryFrame); //"map" 
     trans_pub.publish(odom_trans);
 
     // broadcast the transform over TF
@@ -404,6 +409,10 @@ private:
     //   aligned_points_pub.publish(*aligned);
     // }
 
+    pcl::transformPointCloud (*cloud, *aligned, odom_s2s_now);
+    aligned->header.frame_id = odometryFrame;
+    aligned_points_pub.publish(*aligned);
+
     if (enable_scan_to_map)
       return odom_s2m_now;
     else
@@ -420,27 +429,23 @@ private:
   ros::NodeHandle mt_nh;
   ros::NodeHandle private_nh;
 
-  // ros::Subscriber points_sub;
-//   ros::Subscriber msf_pose_sub;
-//   ros::Subscriber msf_pose_after_update_sub;
-//   ros::Subscriber imu_sub;
-
   std::mutex imu_queue_mutex;
   std::deque<sensor_msgs::ImuConstPtr> imu_queue;
   sensor_msgs::Imu last_frame_imu;
-  std::string mapFrame = "map";
-  std::string odometryFrame = "odom";
+  std::string mapFrame = "odom";
+  std::string odometryFrame = "radar_link";
+  std::string odomTopic = "/radar_odom";
 
   bool enable_imu_fusion;
   bool imu_debug_out;
   Eigen::Matrix3d global_orient_matrix;  // The rotation matrix with initial IMU roll & pitch measurement (yaw = 0)
-    double timeLaserOdometry = 0;
-    int imuPointerFront;
-    int imuPointerLast;
-    double imuTime[radar_graph_slam::imuQueLength];
-    float imuRoll[radar_graph_slam::imuQueLength];
-    float imuPitch[radar_graph_slam::imuQueLength];
-    double imu_fusion_ratio;
+  double timeLaserOdometry = 0;
+  int imuPointerFront;
+  int imuPointerLast;
+  double imuTime[radar_graph_slam::imuQueLength];
+  float imuRoll[radar_graph_slam::imuQueLength];
+  float imuPitch[radar_graph_slam::imuQueLength];
+  double imu_fusion_ratio;
 
   std::unique_ptr<message_filters::Subscriber<geometry_msgs::TwistWithCovarianceStamped>> ego_vel_sub;
   std::unique_ptr<message_filters::Subscriber<sensor_msgs::PointCloud2>> points_sub;
