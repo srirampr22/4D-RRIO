@@ -1,5 +1,7 @@
 #include "utility_radar.h"
 
+#include <tf/transform_broadcaster.h>
+
 #include <gtsam/geometry/Rot3.h>
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/slam/PriorFactor.h>
@@ -19,6 +21,125 @@
 using gtsam::symbol_shorthand::X; // Pose3 (x,y,z,r,p,y)
 using gtsam::symbol_shorthand::V; // Vel   (xdot,ydot,zdot)
 using gtsam::symbol_shorthand::B; // Bias  (ax,ay,az,gx,gy,gz)
+
+class TransformFusion : public ParamServer
+{
+public:
+    std::mutex mtx;
+
+    ros::Subscriber subImuOdometry;
+    ros::Subscriber subRadarOdometry;
+
+    ros::Publisher pubOdometry;
+    ros::Publisher pubImuPath;
+
+    Eigen::Affine3f radarOdomAffine;
+    Eigen::Affine3f imuOdomAffineFront;
+    Eigen::Affine3f imuOdomAffineBack;
+
+    tf::TransformListener tflistener;
+    tf::StampedTransform radar2radar_link;
+
+    double radarOdomTime = -1;
+    deque<nav_msgs::Odometry> imuOdomQueue;
+
+    TransformFusion()
+    {
+        subImuOdometry = nh.subscribe<nav_msgs::Odometry>("/odom_incremental", 5, &TransformFusion::imuOdometryHandler, this, ros::TransportHints().tcpNoDelay());
+        subRadarOdometry = nh.subscribe<nav_msgs::Odometry>("/radar_odom", 2000, &TransformFusion::radarOdometryHandler, this, ros::TransportHints().tcpNoDelay());
+
+        pubOdometry = nh.advertise<nav_msgs::Odometry>("/odom", 2000);
+        pubImuPath = nh.advertise<nav_msgs::Path>("/path", 2000);
+
+        // radarOdomAffine = Eigen::Affine3d::Identity();
+        // imuOdomAffineFront = Eigen::Affine3d::Identity();
+        // imuOdomAffineBack = Eigen::Affine3d::Identity();
+    }
+
+    Eigen::Affine3f odom2affine(nav_msgs::Odometry odom)
+    {
+        double x, y, z, roll, pitch, yaw;
+        x = odom.pose.pose.position.x;
+        y = odom.pose.pose.position.y;
+        z = odom.pose.pose.position.z;
+        tf::Quaternion orientation;
+        tf::quaternionMsgToTF(odom.pose.pose.orientation, orientation);
+        tf::Matrix3x3(orientation).getRPY(roll, pitch, yaw);
+        return pcl::getTransformation(x, y, z, roll, pitch, yaw);
+    }
+
+    void radarOdometryHandler(const nav_msgs::Odometry::ConstPtr& odomMsg)
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+
+        radarOdomAffine = odom2affine(*odomMsg);
+
+        radarOdomTime = odomMsg->header.stamp.toSec();
+    }
+
+    void imuOdometryHandler(const nav_msgs::Odometry::ConstPtr& odomMsg)
+    {
+        imuOdomQueue.push_back(*odomMsg);
+
+        if (radarOdomTime < 0)
+            return;
+        
+        while (!imuOdomQueue.empty())
+        {
+            if (imuOdomQueue.front().header.stamp.toSec() < radarOdomTime - 0.1)
+                imuOdomQueue.pop_front();
+            else
+                break;
+        }
+
+        Eigen::Affine3f imuOdomAffineFront = odom2affine(imuOdomQueue.front());
+        Eigen::Affine3f imuOdomAffineBack = odom2affine(imuOdomQueue.back());
+        Eigen::Affine3f imuOdomAffineIncre = imuOdomAffineFront.inverse() * imuOdomAffineBack;
+        Eigen::Affine3f imuOdomAffineLast = radarOdomAffine * imuOdomAffineIncre; // check this
+
+        float x, y, z, roll, pitch, yaw;
+        pcl::getTranslationAndEulerAngles(imuOdomAffineLast, x, y, z, roll, pitch, yaw);
+
+        // publish latest odometry
+        nav_msgs::Odometry radarOdometry = imuOdomQueue.back();
+        // cout<<"Radar Odometry: "<<radarOdometry<<endl;
+        radarOdometry.pose.pose.position.x = x;
+        radarOdometry.pose.pose.position.y = y;
+        radarOdometry.pose.pose.position.z = z;
+        radarOdometry.pose.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(roll, pitch, yaw);
+        pubOdometry.publish(radarOdometry);
+
+        static tf::TransformBroadcaster tfodom2radarlink;
+        tf::Transform tcurr;
+        tf::poseMsgToTF(radarOdometry.pose.pose, tcurr);
+        // tfodom2radarlink.sendTransform(tf::StampedTransform(tcurr, radarOdometry.header.stamp, "odom", "radar_link"));
+
+        // publish path
+        static nav_msgs::Path imuPath;
+        static double last_path_time = -1;
+        double imuTime = imuOdomQueue.back().header.stamp.toSec();
+        if (imuTime -last_path_time > 0.1) {
+            last_path_time = imuTime;
+            geometry_msgs::PoseStamped this_pose_stamped;
+            this_pose_stamped.header.stamp = imuOdomQueue.back().header.stamp;
+            this_pose_stamped.header.frame_id = "radar_link";
+            this_pose_stamped.pose = radarOdometry.pose.pose;
+            imuPath.poses.push_back(this_pose_stamped);
+            while(!imuPath.poses.empty() && imuPath.poses.front().header.stamp.toSec() < radarOdomTime - 1.0)
+                imuPath.poses.erase(imuPath.poses.begin());
+            if (pubImuPath.getNumSubscribers() != 0)
+            {
+                imuPath.header.stamp = imuOdomQueue.back().header.stamp;
+                imuPath.header.frame_id = odometryFrame;
+                pubImuPath.publish(imuPath);
+            }
+
+        }
+
+
+    }
+
+};
 
 class IMUPreintegration : public ParamServer
 {
@@ -88,7 +209,7 @@ public:
     IMUPreintegration()
     {
         subImu = nh.subscribe<sensor_msgs::Imu>  ("/vectornav/imu", 2000, &IMUPreintegration::imuHandler, this, ros::TransportHints().tcpNoDelay());
-        subOdometry = nh.subscribe<nav_msgs::Odometry>("/odom", 5, &IMUPreintegration::odometryHandler, this, ros::TransportHints().tcpNoDelay());
+        subOdometry = nh.subscribe<nav_msgs::Odometry>("/radar_odom", 5, &IMUPreintegration::odometryHandler, this, ros::TransportHints().tcpNoDelay());
 
         pubImuOdometry = nh.advertise<nav_msgs::Odometry> ("/odom_incremental", 2000);
 
@@ -166,9 +287,6 @@ public:
 
         // make sure we have imu data to integrate
         if (imuQueOpt.empty()) {
-            // cout<<"imuQueOpt is empty"<<endl;
-            // int size = imuQueOpt.size();
-            // cout<<"IMUque opt size: "<<size<<endl;
             ROS_INFO("imuQueOpt is empty");
             return;
         }
@@ -211,7 +329,7 @@ public:
             gtsam::PriorFactor<gtsam::Pose3> priorPose(X(0), prevPose_, priorPoseNoise);
             graphFactors.add(priorPose);
             
-            cout<<"Prev Pose: "<<prevPose_<<endl; 
+            // cout<<"Prev Pose: "<<prevPose_<<endl; 
 
             // initial velocity
             prevVel_ = gtsam::Vector3(0, 0, 0);
@@ -236,7 +354,7 @@ public:
             
             key = 1;
             systemInitialized = true;
-            cout<<"System Initialized and the key is: "<<key<<endl;
+            // cout<<"System Initialized and the key is: "<<key<<endl;
             return;
         }    
 
@@ -360,9 +478,6 @@ public:
         doneFirstOpt = true;
     }
 
-
-
-
     
 
     void imuHandler(const sensor_msgs::Imu::ConstPtr& imu_raw)
@@ -370,29 +485,19 @@ public:
         std::lock_guard<std::mutex> lock(mtx);
 
         if (imu_raw == nullptr) {
-            cout<<"imu_raw is nullptr"<<endl;
             ROS_INFO("imu_raw is nullptr");
-            // return;
         }
-
 
         sensor_msgs::Imu thisImu = imuConverter(*imu_raw);
 
-        // cout<<"imu message converted"<<endl;
-
         imuQueOpt.push_back(thisImu);
         imuQueImu.push_back(thisImu);
-
-        
-
-        // cout<<"Queues all good step 1"<<endl;
 
         if (doneFirstOpt == false) {
             // cout<<"doneFirstOpt is false"<<endl;
             return;
         }
             
-
         double imuTime = ROS_TIME(&thisImu);
         double dt = (lastImuT_imu < 0) ? (1.0 / 500.0) : (imuTime - lastImuT_imu);
         lastImuT_imu = imuTime;
@@ -407,8 +512,8 @@ public:
         // publish odometry
         nav_msgs::Odometry odometry;
         odometry.header.stamp = thisImu.header.stamp;
-        odometry.header.frame_id = "map";
-        odometry.child_frame_id = "odom_imu";
+        odometry.header.frame_id = "odom";
+        odometry.child_frame_id = "imu_link";
 
         // transform imu pose to radar
         gtsam::Pose3 imuPose = gtsam::Pose3(currentState.quaternion(), currentState.position());
@@ -421,6 +526,20 @@ public:
         odometry.pose.pose.orientation.y = radarPose.rotation().toQuaternion().y();
         odometry.pose.pose.orientation.z = radarPose.rotation().toQuaternion().z();
         odometry.pose.pose.orientation.w = radarPose.rotation().toQuaternion().w();
+
+
+        transformStamped.header.stamp = odometry.header.stamp;
+        transformStamped.header.frame_id = odometry.header.frame_id;
+        transformStamped.child_frame_id = odometry.child_frame_id;
+        transformStamped.transform.translation.x = radarPose.translation().x();
+        transformStamped.transform.translation.y = radarPose.translation().y();
+        transformStamped.transform.translation.z = radarPose.translation().z();
+        transformStamped.transform.rotation.x = odometry.pose.pose.orientation.x;
+        transformStamped.transform.rotation.y = odometry.pose.pose.orientation.y;
+        transformStamped.transform.rotation.z = odometry.pose.pose.orientation.z;
+        transformStamped.transform.rotation.w = odometry.pose.pose.orientation.w;
+
+        odom2imu_broadcaster.sendTransform(transformStamped);
         
         odometry.twist.twist.linear.x = currentState.velocity().x();
         odometry.twist.twist.linear.y = currentState.velocity().y();
@@ -429,7 +548,12 @@ public:
         odometry.twist.twist.angular.y = thisImu.angular_velocity.y + prevBiasOdom.gyroscope().y();
         odometry.twist.twist.angular.z = thisImu.angular_velocity.z + prevBiasOdom.gyroscope().z();
         pubImuOdometry.publish(odometry);
+
+
     }
+private:
+    tf::TransformBroadcaster odom2imu_broadcaster; // map => odom_frame
+    geometry_msgs::TransformStamped transformStamped;
 };
 
 
@@ -438,6 +562,8 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "imu_preintegration_node");
     
     IMUPreintegration ImuP;
+
+    TransformFusion TF;
 
     // cout<<"IMU Preintegration Node Started"<<endl;
 
