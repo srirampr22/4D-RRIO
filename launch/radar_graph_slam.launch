@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
   <!-- Parameters -->
-  <rosparam file="$(find radar_graph_slam)/config/params.yaml" command="load" />
+  <rosparam file="$(find radar_graph_slam)/config/old_params.yaml" command="load" />
   <param name="use_sim_time" value="true"/>
   
   <!-- arguments -->
@@ -9,9 +9,9 @@
   <arg name="enable_floor_detection" default="True" />
   <arg name="enable_barometer" default="false" /> <!-- barometer altitude constraint, not used -->
   <arg name="barometer_edge_type" default="1" /> <!-- not used -->
-  <arg name="enable_gps" default="True" />
+  <arg name="enable_gps" default="false" />
   <arg name="enable_dynamic_object_removal" default="false" />
-  <arg name="enable_frontend_ego_vel" default="false" />
+  <arg name="enable_frontend_ego_vel" default="true" />
   <arg name="enable_preintegration" default="false" /> <!-- not used -->
 
   <arg name="keyframe_delta_trans_front_end" default="0.5" />
@@ -19,7 +19,7 @@
   <arg name="keyframe_delta_angle" default="0.2612" /><!-- 10°: 0.1745 15°: 0.2612 -->
 
   <arg name="enable_transform_thresholding" default="true" />
-  <arg name="enable_loop_closure" default="True" />
+  <arg name="enable_loop_closure" default="false" />
   
   <!-- ICP NDT_OMP FAST_GICP FAST_APDGICP FAST_VGICP   -->
   <arg name="registration_method" default="FAST_APDGICP" />
@@ -33,7 +33,7 @@
   <arg name="enable_robot_odometry_init_guess" default="false" /> <!-- not used -->
 
   <!-- transformation between lidar and base_link -->
-  <!-- <node pkg="tf" type="static_transform_publisher" name="imu2radar_publisher" args="0 0 0 0 0 0 imu_frame base_link 10" /> -->
+  <!-- <node pkg="tf" type="static_transform_publisher" name="imu2radar_publisher" args="0 0 0 0 0 0 map odom 10" /> -->
   
   <node pkg="nodelet" type="nodelet" name="$(arg nodelet_manager)" args="manager" output="screen"/>
 
@@ -193,7 +193,7 @@
     <param name="show_sphere" value="false" />
   </node>
 
-  <!-- <node pkg="rviz" type="rviz" name="rviz_slam" args="-d $(find radar_graph_slam)/rviz/radar_graph_slam.rviz" respawn="true"/> -->
+  <node pkg="rviz" type="rviz" name="rviz_slam" args="-d $(find radar_graph_slam)/rviz/radar_graph_slam.rviz" respawn="true"/>
 
   <!--- Rosbag Play -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_carpark1.launch" /> -->
