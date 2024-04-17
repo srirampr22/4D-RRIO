@@ -102,10 +102,14 @@ public:
     vector<double> extRotV;
     vector<double> extRPYV;
     vector<double> extTransV;
-    Eigen::Matrix3d extRot;
+    
     Eigen::Matrix3d extRPY;
     Eigen::Vector3d extTrans;
-    Eigen::Quaterniond extQRPY;
+    // Eigen::Quaterniond extQRPY;
+    // Eigen::Matrix3d extRot;
+    // double qx = 0.9998768, qy = -0.0143339, qz = -0.005478, qw = -0.0032931;
+    Eigen::Quaterniond extQRPY = Eigen::Quaterniond(-0.0032931, 0.9998768, -0.0143339, -0.005478); // Default initialization
+    Eigen::Matrix3d extRot = extQRPY.toRotationMatrix();
 
     // voxel filter paprams
     float odometrySurfLeafSize;
@@ -170,10 +174,15 @@ public:
         nh.param<vector<double>>("radar_slam/extrinsicRot", extRotV, vector<double>());
         nh.param<vector<double>>("radar_slam/extrinsicRPY", extRPYV, vector<double>());
         nh.param<vector<double>>("radar_slam/extrinsicTrans", extTransV, vector<double>());
-        extRot = Eigen::Map<const Eigen::Matrix<double, -1, -1, Eigen::RowMajor>>(extRotV.data(), 3, 3);
-        extRPY = Eigen::Map<const Eigen::Matrix<double, -1, -1, Eigen::RowMajor>>(extRPYV.data(), 3, 3);
+
+        // double qx = 0.9998768, qy = -0.0143339, qz = -0.005478, qw = -0.0032931;
+        // Eigen::Quaterniond extQRPY(qw, qx, qy, qz);
+        // Eigen::Matrix3d extRot = extQRPY.toRotationMatrix();
+
+        // extRot = Eigen::Map<const Eigen::Matrix<double, -1, -1, Eigen::RowMajor>>(extRotV.data(), 3, 3);
+        // extRPY = Eigen::Map<const Eigen::Matrix<double, -1, -1, Eigen::RowMajor>>(extRPYV.data(), 3, 3);
         extTrans = Eigen::Map<const Eigen::Matrix<double, -1, -1, Eigen::RowMajor>>(extTransV.data(), 3, 1);
-        extQRPY = Eigen::Quaterniond(extRPY);
+        // extQRPY = Eigen::Quaterniond(extRPY);
 
         nh.param<float>("radar_slam/odometrySurfLeafSize", odometrySurfLeafSize, 0.2);
         nh.param<float>("radar_slam/mappingCornerLeafSize", mappingCornerLeafSize, 0.2);
@@ -230,6 +239,14 @@ public:
             ROS_ERROR("Invalid quaternion, please use a 9-axis IMU!");
             ros::shutdown();
         }
+
+        cout<<"Extrinsic Rotation: "<<extRot<<endl;
+            // i want to print out the extrinsic rotation quaternion (extQRPY) here how do i do that? 
+        cout << "Extrinsic Quaternion: "
+             << "w: " << extQRPY.w() << ", "
+             << "x: " << extQRPY.x() << ", "
+             << "y: " << extQRPY.y() << ", "
+             << "z: " << extQRPY.z() << endl;
 
         return imu_out;
     }
