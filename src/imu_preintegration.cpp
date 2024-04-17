@@ -45,11 +45,11 @@ public:
 
     TransformFusion()
     {
-        subImuOdometry = nh.subscribe<nav_msgs::Odometry>("/odom_incremental", 5, &TransformFusion::imuOdometryHandler, this, ros::TransportHints().tcpNoDelay());
-        subRadarOdometry = nh.subscribe<nav_msgs::Odometry>("/radar_odom", 2000, &TransformFusion::radarOdometryHandler, this, ros::TransportHints().tcpNoDelay());
+        subImuOdometry = nh.subscribe<nav_msgs::Odometry>("/imu_odom_incremental", 2000, &TransformFusion::imuOdometryHandler, this, ros::TransportHints().tcpNoDelay());
+        subRadarOdometry = nh.subscribe<nav_msgs::Odometry>("/radar_odom", 15, &TransformFusion::radarOdometryHandler, this, ros::TransportHints().tcpNoDelay());
 
-        pubOdometry = nh.advertise<nav_msgs::Odometry>("/odom", 2000);
-        pubImuPath = nh.advertise<nav_msgs::Path>("/path", 2000);
+        pubOdometry = nh.advertise<nav_msgs::Odometry>("/fusion_odom", 2000);
+        pubImuPath = nh.advertise<nav_msgs::Path>("/fusion_path", 2000);
 
         // radarOdomAffine = Eigen::Affine3d::Identity();
         // imuOdomAffineFront = Eigen::Affine3d::Identity();
@@ -72,6 +72,10 @@ public:
     {
         std::lock_guard<std::mutex> lock(mtx);
 
+        if (odomMsg == nullptr) {
+            ROS_INFO("radarOdomMsg is empty");
+        }
+
         radarOdomAffine = odom2affine(*odomMsg);
 
         radarOdomTime = odomMsg->header.stamp.toSec();
@@ -79,6 +83,14 @@ public:
 
     void imuOdometryHandler(const nav_msgs::Odometry::ConstPtr& odomMsg)
     {
+        if (odomMsg == nullptr) {
+            ROS_INFO("imuOdomIncreMsg is empty");
+        }
+            
+        // static tf::TransformBroadcaster tfWorld2Odom;
+        // static tf::Transform world_to_odom = tf::Transform(tf::createQuaternionFromRPY(0, 0, 0), tf::Vector3(0, 0, 0));
+        // tfWorld2Odom.sendTransform(tf::StampedTransform(world_to_odom, odomMsg->header.stamp, "world", "odom"));
+
         imuOdomQueue.push_back(*odomMsg);
 
         if (radarOdomTime < 0)
@@ -108,11 +120,12 @@ public:
         radarOdometry.pose.pose.position.z = z;
         radarOdometry.pose.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(roll, pitch, yaw);
         pubOdometry.publish(radarOdometry);
+        // cout<<"Succesfully Published Radar Odometry: "<<radarOdometry<<endl;
 
         static tf::TransformBroadcaster tfodom2radarlink;
         tf::Transform tcurr;
         tf::poseMsgToTF(radarOdometry.pose.pose, tcurr);
-        // tfodom2radarlink.sendTransform(tf::StampedTransform(tcurr, radarOdometry.header.stamp, "odom", "radar_link"));
+        tfodom2radarlink.sendTransform(tf::StampedTransform(tcurr, radarOdometry.header.stamp, "odom", "radar_link"));
 
         // publish path
         static nav_msgs::Path imuPath;
@@ -132,6 +145,7 @@ public:
                 imuPath.header.stamp = imuOdomQueue.back().header.stamp;
                 imuPath.header.frame_id = odometryFrame;
                 pubImuPath.publish(imuPath);
+                
             }
 
         }
@@ -187,14 +201,15 @@ public:
 
     int key = 1;
 
-    // T_bl: tramsform points from radar frame to imu frame
+    // T_bl: radar frame to imu frame
     // 0.999735807578		-0.0215215701795	-0.0081643477385	-0.3176955976234
     // -0.02148120581797	-0.9997581134183	0.00502853428037	-0.13761019052125
     // -0.00826995351904	-0.0048509797951	-0.99995400578406	0.05898352725152
     // 0			0			0			1
 
     //roataion in quaternion
-    double qx = 0.9999307, qy = -0.0107514, qz = -0.0041089, qw = -0.00247;
+    // double qx = 0.9999307, qy = -0.0107514, qz = -0.0041089, qw = -0.00247;
+    double qx = 0.9998768, qy = -0.0143339, qz = -0.005478, qw = -0.0032931;
     // translation
     double x = -0.3176955976234, y = -0.13761019052125, z = 0.05898352725152;
 
@@ -209,9 +224,9 @@ public:
     IMUPreintegration()
     {
         subImu = nh.subscribe<sensor_msgs::Imu>  ("/vectornav/imu", 2000, &IMUPreintegration::imuHandler, this, ros::TransportHints().tcpNoDelay());
-        subOdometry = nh.subscribe<nav_msgs::Odometry>("/radar_odom", 5, &IMUPreintegration::odometryHandler, this, ros::TransportHints().tcpNoDelay());
+        subOdometry = nh.subscribe<nav_msgs::Odometry>("/radar_incremental_odom", 15, &IMUPreintegration::odometryHandler, this, ros::TransportHints().tcpNoDelay());
 
-        pubImuOdometry = nh.advertise<nav_msgs::Odometry> ("/odom_incremental", 2000);
+        pubImuOdometry = nh.advertise<nav_msgs::Odometry> ("/imu_odom_incremental", 2000);
 
         boost::shared_ptr<gtsam::PreintegrationParams> p = gtsam::PreintegrationParams::MakeSharedU(imuGravity);
         p->accelerometerCovariance  = gtsam::Matrix33::Identity(3,3) * pow(imuAccNoise, 2); // acc white noise in continuous
@@ -277,9 +292,7 @@ public:
         std::lock_guard<std::mutex> lock(mtx);
 
         if(odomMsg == nullptr) {
-            // cout<<"odomMsg is nullptr"<<endl;
-            ROS_INFO("odomMsg is nullptr");
-            // return;
+            ROS_INFO("radarOdomIncreMsg is empty");
         }
 
 
@@ -302,7 +315,8 @@ public:
 
         
 
-        bool degenerate = (int)odomMsg->pose.covariance[0] == 1 ? true : false;
+        // bool degenerate = (int)odomMsg->pose.covariance[0] == 1 ? true : false;
+        bool degenerate = true;
         gtsam::Pose3 radarPose = gtsam::Pose3(gtsam::Rot3::Quaternion(r_w, r_x, r_y, r_z), gtsam::Point3(p_x, p_y, p_z));    
 
         // 0. initialize system
@@ -441,6 +455,7 @@ public:
         // check optimization
         if (failureDetection(prevVel_, prevBias_))
         {
+            ROS_INFO("failure with optimization");
             resetParams();
             return;
         }
@@ -485,8 +500,11 @@ public:
         std::lock_guard<std::mutex> lock(mtx);
 
         if (imu_raw == nullptr) {
-            ROS_INFO("imu_raw is nullptr");
+            ROS_INFO("imurawMsg is emtpy");
         }
+        // else {
+        //     ROS_INFO("imurawMsg is not empty");
+        // }
 
         sensor_msgs::Imu thisImu = imuConverter(*imu_raw);
 
@@ -501,6 +519,7 @@ public:
         double imuTime = ROS_TIME(&thisImu);
         double dt = (lastImuT_imu < 0) ? (1.0 / 500.0) : (imuTime - lastImuT_imu);
         lastImuT_imu = imuTime;
+        // cout<<"interval time: "<<dt<<endl;
 
         // integrate this single imu message
         imuIntegratorImu_->integrateMeasurement(gtsam::Vector3(thisImu.linear_acceleration.x, thisImu.linear_acceleration.y, thisImu.linear_acceleration.z),
@@ -566,8 +585,6 @@ int main(int argc, char** argv)
     TransformFusion TF;
 
     // cout<<"IMU Preintegration Node Started"<<endl;
-
-    // TransformFusion TF;
 
     ROS_INFO("\033[1;32m----> IMU Preintegration Started.\033[0m");
     
