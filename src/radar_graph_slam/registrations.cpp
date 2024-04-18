@@ -24,14 +24,14 @@ pcl::Registration<pcl::PointXYZI, pcl::PointXYZI>::Ptr select_registration_metho
   using PointT = pcl::PointXYZI;
 
   // select a registration method (ICP, GICP, NDT)
-  std::string registration_method = pnh.param<std::string>("registration_method", "NDT_OMP");
+  std::string registration_method = pnh.param<std::string>("registration_method", "FAST_APDGICP");
   if(registration_method == "FAST_GICP") {
     std::cout << "registration: FAST_GICP" << std::endl;
     fast_gicp::FastGICP<PointT, PointT>::Ptr gicp(new fast_gicp::FastGICP<PointT, PointT>());
     gicp->setNumThreads(pnh.param<int>("reg_num_threads", 0));
     gicp->setTransformationEpsilon(pnh.param<double>("reg_transformation_epsilon", 0.01));
     gicp->setMaximumIterations(pnh.param<int>("reg_maximum_iterations", 64));
-    gicp->setMaxCorrespondenceDistance(pnh.param<double>("reg_max_correspondence_distance", 2.5));
+    gicp->setMaxCorrespondenceDistance(pnh.param<double>("reg_max_correspondence_distance", 2.0));
     gicp->setCorrespondenceRandomness(pnh.param<int>("reg_correspondence_randomness", 20));
     return gicp;
   }
@@ -39,7 +39,7 @@ pcl::Registration<pcl::PointXYZI, pcl::PointXYZI>::Ptr select_registration_metho
     std::cout << "registration: FAST_APDGICP" << std::endl;
     fast_gicp::FastAPDGICP<PointT, PointT>::Ptr apdgicp(new fast_gicp::FastAPDGICP<PointT, PointT>());
     apdgicp->setNumThreads(pnh.param<int>("reg_num_threads", 0));
-    apdgicp->setTransformationEpsilon(pnh.param<double>("reg_transformation_epsilon", 0.01));
+    apdgicp->setTransformationEpsilon(pnh.param<double>("reg_transformation_epsilon", 0.1)); // 0.01
     apdgicp->setMaximumIterations(pnh.param<int>("reg_maximum_iterations", 64));
     apdgicp->setMaxCorrespondenceDistance(pnh.param<double>("reg_max_correspondence_distance", 2.5));
     apdgicp->setCorrespondenceRandomness(pnh.param<int>("reg_correspondence_randomness", 20));
@@ -114,7 +114,7 @@ pcl::Registration<pcl::PointXYZI, pcl::PointXYZI>::Ptr select_registration_metho
       return ndt;
     } else {
       int num_threads = pnh.param<int>("reg_num_threads", 0);
-      std::string nn_search_method = pnh.param<std::string>("reg_nn_search_method", "DIRECT7");
+      std::string nn_search_method = pnh.param<std::string>("reg_nn_search_method", "KDTREE"); // DIRECT1, DIRECT7
       std::cout << "registration: NDT_OMP " << nn_search_method << " " << ndt_resolution << " (" << num_threads << " threads)" << std::endl;
       pclomp::NormalDistributionsTransform<PointT, PointT>::Ptr ndt(new pclomp::NormalDistributionsTransform<PointT, PointT>());
       if(num_threads > 0) {

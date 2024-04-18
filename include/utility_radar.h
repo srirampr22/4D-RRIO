@@ -240,13 +240,13 @@ public:
             ros::shutdown();
         }
 
-        cout<<"Extrinsic Rotation: "<<extRot<<endl;
-            // i want to print out the extrinsic rotation quaternion (extQRPY) here how do i do that? 
-        cout << "Extrinsic Quaternion: "
-             << "w: " << extQRPY.w() << ", "
-             << "x: " << extQRPY.x() << ", "
-             << "y: " << extQRPY.y() << ", "
-             << "z: " << extQRPY.z() << endl;
+        // cout<<"Extrinsic Rotation: "<<extRot<<endl;
+        //     // i want to print out the extrinsic rotation quaternion (extQRPY) here how do i do that? 
+        // cout << "Extrinsic Quaternion: "
+        //      << "w: " << extQRPY.w() << ", "
+        //      << "x: " << extQRPY.x() << ", "
+        //      << "y: " << extQRPY.y() << ", "
+        //      << "z: " << extQRPY.z() << endl;
 
         return imu_out;
     }

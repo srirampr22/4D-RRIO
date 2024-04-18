@@ -22,10 +22,10 @@ public:
    * @param pnh
    */
   KeyframeUpdater(ros::NodeHandle& pnh) : is_first(true), prev_keypose(Eigen::Isometry3d::Identity()) {
-    keyframe_delta_trans = pnh.param<double>("keyframe_delta_trans", 2.0);
-    keyframe_delta_angle = pnh.param<double>("keyframe_delta_angle", 2.0);
+    keyframe_delta_trans = pnh.param<double>("keyframe_delta_trans", 0.5); // 2.0
+    keyframe_delta_angle = pnh.param<double>("keyframe_delta_angle", 0.2612); //2.0
     // keyframe_delta_time = pnh.param<double>("keyframe_delta_time", 2.0);
-    keyframe_min_size = pnh.param<int>("keyframe_min_size", 1000);
+    keyframe_min_size = pnh.param<int>("keyframe_min_size", 100); //1000
 
     accum_distance = 0.0;
   }

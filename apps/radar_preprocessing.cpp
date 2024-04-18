@@ -57,7 +57,7 @@ public:
     initializeParams();
 
     points_sub = nh.subscribe(pointCloudTopic, 64, &PreprocessingNodelet::cloud_callback, this); // Subscribes to radar pointcloud
-    imu_sub = nh.subscribe(imuTopic, 1, &PreprocessingNodelet::imu_callback, this); // Subscribes to IMU data
+    // imu_sub = nh.subscribe(imuTopic, 1, &PreprocessingNodelet::imu_callback, this); // Subscribes to IMU data
     command_sub = nh.subscribe("/command", 10, &PreprocessingNodelet::command_callback, this); // Not sure what this is
 
     points_pub = nh.advertise<sensor_msgs::PointCloud2>("/filtered_points", 32);
@@ -100,7 +100,11 @@ private:
     1,0,0,0,
     0,0,0,1);
     Radar_to_livox=RGB_to_livox*Thermal_to_RGB*Radar_to_Thermal*Change_Radarframe;
-    std::cout << "Radar_to_livox = "<< std::endl << " "  << Radar_to_livox << std::endl << std::endl;
+    // Radar_to_livox = (cv::Mat_<double>(4,4) << 1.0 , 0.0, 0.0, 0.0,
+                                              // 0.0, 1.0, 0.0, 0.0,
+                                              // 0.0, 0.0, 1.0, 0.0,
+                                              // 0.0, 0.0, 0.0, 1.0);
+    
   }
   void initializeParams() {
     std::string downsample_method = private_nh.param<std::string>("downsample_method", "VOXELGRID");
@@ -275,7 +279,6 @@ private:
     radarcloud_xyzi->header.stamp = eagle_msg->header.stamp.toSec() * 1e6;
     for(int i = 0; i < eagle_msg->points.size(); i++)
     {
-        // cout << i << ":    " <<eagle_msg->points[i].x<<endl;
         if(eagle_msg->channels[2].values[i] > power_threshold) //"Power"
         {
             if (eagle_msg->points[i].x == NAN || eagle_msg->points[i].y == NAN || eagle_msg->points[i].z == NAN) continue;
@@ -284,6 +287,8 @@ private:
             ptMat = (cv::Mat_<double>(4, 1) << eagle_msg->points[i].x, eagle_msg->points[i].y, eagle_msg->points[i].z, 1);    
             // Perform matrix multiplication and save as Mat_ for easy element access
             dstMat= Radar_to_livox * ptMat;
+            // cout << "Radar_to_livox = " << Radar_to_livox<<endl;
+            // ROS_INFO("Radar point cloud to LiDAR frame transformation");
             radarpoint_raw.x = dstMat.at<double>(0,0);
             radarpoint_raw.y = dstMat.at<double>(1,0);
             radarpoint_raw.z = dstMat.at<double>(2,0);

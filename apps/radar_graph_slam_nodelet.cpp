@@ -140,18 +140,9 @@ public:
     sync.reset(new message_filters::Synchronizer<ApproxSyncPolicy>(ApproxSyncPolicy(32), *odom_sub, *cloud_sub));
     sync->registerCallback(boost::bind(&RadarGraphSlamNodelet::cloud_callback, this, _1, _2));
     
-    if(private_nh.param<bool>("enable_gps", true)) {
-      gps_sub = mt_nh.subscribe("/gps/geopoint", 1024, &RadarGraphSlamNodelet::gps_callback, this);
-      nmea_sub = mt_nh.subscribe("/gpsimu_driver/nmea_sentence", 1024, &RadarGraphSlamNodelet::nmea_callback, this);
-      navsat_sub = mt_nh.subscribe(gpsTopic, 1024, &RadarGraphSlamNodelet::navsat_callback, this);
-    }
-    // if(private_nh.param<bool>("enable_barometer", false)) {
-    //   barometer_sub = mt_nh.subscribe("/barometer/filtered", 16, &RadarGraphSlamNodelet::barometer_callback, this);
-    // }
+
     if (enable_preintegration)
-      imu_odom_sub = nh.subscribe("/imu_pre_integ/imu_odom_incre", 1024, &RadarGraphSlamNodelet::imu_odom_callback, this);
-    imu_sub = nh.subscribe("/imu", 1024, &RadarGraphSlamNodelet::imu_callback, this);
-    command_sub = nh.subscribe("/command", 10, &RadarGraphSlamNodelet::command_callback, this);
+      imu_odom_sub = nh.subscribe("/imu_pre_integ/imu_odom_incre", 1024, &RadarGraphSlamNodelet::imu_odom_callback, this); // need to subscribe to our /odom_incremental
 
     //***** publishers ******
     markers_pub = mt_nh.advertise<visualization_msgs::MarkerArray>("/radar_graph_slam/markers", 16);
@@ -210,7 +201,8 @@ private:
     if (pow(map2base_trans.transform.rotation.w,2)+pow(map2base_trans.transform.rotation.x,2)+
       pow(map2base_trans.transform.rotation.y,2)+pow(map2base_trans.transform.rotation.z,2) < pow(0.9,2)) 
       {map2base_trans.transform.rotation.w=1; map2base_trans.transform.rotation.x=0; map2base_trans.transform.rotation.y=0; map2base_trans.transform.rotation.z=0;}
-    map2base_broadcaster.sendTransform(map2base_trans);
+    // map2base_broadcaster.sendTransform(map2base_trans);
+    // cout<<"BASE LINK TRANSFORM: "<<map2base_trans<<endl;
    
     pcl::PointCloud<PointT>::Ptr cloud(new pcl::PointCloud<PointT>());
     pcl::fromROSMsg(*cloud_msg, *cloud);
@@ -251,6 +243,7 @@ private:
     if (enable_preintegration){
       // Intergerate translation of ego velocity, add rotation
       geometry_msgs::Transform transf_integ = preIntegrationTransform();
+      // cout<<"transf_integ: "<<transf_integ.translation.x<<", "<<transf_integ.translation.y<<", "<<transf_integ.translation.z<<endl;
       static uint32_t sequ = 0;
       nav_msgs::Odometry odom_frame2frame;
       odom_frame2frame.pose.pose.orientation = transf_integ.rotation;
@@ -290,40 +283,40 @@ private:
   }
 
 
-  void imu_callback(const sensor_msgs::ImuConstPtr& imu_odom_msg) {
-    // Transform to Radar's Frame
-    geometry_msgs::QuaternionStamped::Ptr imu_quat(new geometry_msgs::QuaternionStamped);
-    imu_quat->quaternion = imu_odom_msg->orientation;
-    Eigen::Quaterniond imu_quat_from(imu_quat->quaternion.w, imu_quat->quaternion.x, imu_quat->quaternion.y, imu_quat->quaternion.z);
-    Eigen::Quaterniond imu_quat_deskew = imu_quat_from * extQRPY;
-    imu_quat_deskew.normalize();
+  // void imu_callback(const sensor_msgs::ImuConstPtr& imu_odom_msg) {
+  //   // Transform to Radar's Frame
+  //   geometry_msgs::QuaternionStamped::Ptr imu_quat(new geometry_msgs::QuaternionStamped);
+  //   imu_quat->quaternion = imu_odom_msg->orientation;
+  //   Eigen::Quaterniond imu_quat_from(imu_quat->quaternion.w, imu_quat->quaternion.x, imu_quat->quaternion.y, imu_quat->quaternion.z);
+  //   Eigen::Quaterniond imu_quat_deskew = imu_quat_from * extQRPY;
+  //   imu_quat_deskew.normalize();
 
-    static int cnt = 0;
-    if(cnt == 0) {
-      double roll, pitch, yaw;
-      tf::Quaternion orientation = tf::Quaternion(imu_quat_deskew.x(),imu_quat_deskew.y(),imu_quat_deskew.z(),imu_quat_deskew.w());
-      tf::quaternionMsgToTF(imu_odom_msg->orientation, orientation);
-      tf::Matrix3x3(orientation).getRPY(roll, pitch, yaw);
-      // Eigen::Matrix3d imu_mat_deskew = imu_quat_deskew.toRotationMatrix();
-      // Eigen::Vector3d eulerAngle = imu_mat_deskew.eulerAngles(0,1,2); // roll pitch yaw
-      Eigen::AngleAxisd rollAngle(AngleAxisd(roll,Vector3d::UnitX()));
-      Eigen::AngleAxisd pitchAngle(AngleAxisd(pitch,Vector3d::UnitY()));
-      Eigen::AngleAxisd yawAngle(AngleAxisd(0.0,Vector3d::UnitZ()));
-      Eigen::Matrix3d imu_mat_final; imu_mat_final = yawAngle * pitchAngle * rollAngle;
+  //   static int cnt = 0;
+  //   if(cnt == 0) {
+  //     double roll, pitch, yaw;
+  //     tf::Quaternion orientation = tf::Quaternion(imu_quat_deskew.x(),imu_quat_deskew.y(),imu_quat_deskew.z(),imu_quat_deskew.w());
+  //     tf::quaternionMsgToTF(imu_odom_msg->orientation, orientation);
+  //     tf::Matrix3x3(orientation).getRPY(roll, pitch, yaw);
+  //     // Eigen::Matrix3d imu_mat_deskew = imu_quat_deskew.toRotationMatrix();
+  //     // Eigen::Vector3d eulerAngle = imu_mat_deskew.eulerAngles(0,1,2); // roll pitch yaw
+  //     Eigen::AngleAxisd rollAngle(AngleAxisd(roll,Vector3d::UnitX()));
+  //     Eigen::AngleAxisd pitchAngle(AngleAxisd(pitch,Vector3d::UnitY()));
+  //     Eigen::AngleAxisd yawAngle(AngleAxisd(0.0,Vector3d::UnitZ()));
+  //     Eigen::Matrix3d imu_mat_final; imu_mat_final = yawAngle * pitchAngle * rollAngle;
 
-      Eigen::Isometry3d isom_initial_pose;
-      isom_initial_pose.setIdentity();
-      isom_initial_pose.rotate(imu_mat_final); // Set rotation
-      initial_pose = isom_initial_pose.matrix();
-      ROS_INFO("Initial Position Matrix = ");
-      std::cout << 
-        initial_pose(0,0) << ", " << initial_pose(0,1) << ", " << initial_pose(0,2) << ", " << initial_pose(0,3) << ", " << std::endl <<
-        initial_pose(1,0) << ", " << initial_pose(1,1) << ", " << initial_pose(1,2) << ", " << initial_pose(1,3) << ", " << std::endl <<
-        initial_pose(2,0) << ", " << initial_pose(2,1) << ", " << initial_pose(2,2) << ", " << initial_pose(2,3) << ", " << std::endl <<
-        initial_pose(3,0) << ", " << initial_pose(3,1) << ", " << initial_pose(3,2) << ", " << initial_pose(3,3) << ", " << std::endl << std::endl;
-      cnt = 1;
-    }
-  }
+  //     Eigen::Isometry3d isom_initial_pose;
+  //     isom_initial_pose.setIdentity();
+  //     isom_initial_pose.rotate(imu_mat_final); // Set rotation
+  //     initial_pose = isom_initial_pose.matrix();
+  //     ROS_INFO("Initial Position Matrix = ");
+  //     std::cout << 
+  //       initial_pose(0,0) << ", " << initial_pose(0,1) << ", " << initial_pose(0,2) << ", " << initial_pose(0,3) << ", " << std::endl <<
+  //       initial_pose(1,0) << ", " << initial_pose(1,1) << ", " << initial_pose(1,2) << ", " << initial_pose(1,3) << ", " << std::endl <<
+  //       initial_pose(2,0) << ", " << initial_pose(2,1) << ", " << initial_pose(2,2) << ", " << initial_pose(2,3) << ", " << std::endl <<
+  //       initial_pose(3,0) << ", " << initial_pose(3,1) << ", " << initial_pose(3,2) << ", " << initial_pose(3,3) << ", " << std::endl << std::endl;
+  //     cnt = 1;
+  //   }
+  // }
 
   void imu_odom_callback(const nav_msgs::OdometryConstPtr& imu_odom_msg) {
     {
@@ -1068,124 +1061,124 @@ private:
     return true;
   }
 
-  void nmea_callback(const nmea_msgs::SentenceConstPtr& nmea_msg) {
-    GPRMC grmc = nmea_parser->parse(nmea_msg->sentence);
-    if(grmc.status != 'A')
-      return;
-    geographic_msgs::GeoPointStampedPtr gps_msg(new geographic_msgs::GeoPointStamped());
-    gps_msg->header = nmea_msg->header;
-    gps_msg->position.latitude = grmc.latitude;
-    gps_msg->position.longitude = grmc.longitude;
-    gps_msg->position.altitude = NAN;
-    gps_callback(gps_msg);
-  }
+  // void nmea_callback(const nmea_msgs::SentenceConstPtr& nmea_msg) {
+  //   GPRMC grmc = nmea_parser->parse(nmea_msg->sentence);
+  //   if(grmc.status != 'A')
+  //     return;
+  //   geographic_msgs::GeoPointStampedPtr gps_msg(new geographic_msgs::GeoPointStamped());
+  //   gps_msg->header = nmea_msg->header;
+  //   gps_msg->position.latitude = grmc.latitude;
+  //   gps_msg->position.longitude = grmc.longitude;
+  //   gps_msg->position.altitude = NAN;
+  //   gps_callback(gps_msg);
+  // }
 
-  void navsat_callback(const sensor_msgs::NavSatFixConstPtr& navsat_msg) {
-    sensor_msgs::NavSatFix gps_msg;
-    gps_msg.header = navsat_msg->header;
-    gps_msg.latitude = navsat_msg->latitude;
-    gps_msg.longitude = navsat_msg->longitude;
-    gps_msg.altitude = navsat_msg->altitude;
-    gps_msg.position_covariance = navsat_msg->position_covariance;
-    gps_msg.position_covariance_type = navsat_msg->position_covariance_type;
-    gps_msg.status = navsat_msg->status;
-    gps_navsat_queue.push_back(gps_msg);
-  }
+  // void navsat_callback(const sensor_msgs::NavSatFixConstPtr& navsat_msg) {
+  //   sensor_msgs::NavSatFix gps_msg;
+  //   gps_msg.header = navsat_msg->header;
+  //   gps_msg.latitude = navsat_msg->latitude;
+  //   gps_msg.longitude = navsat_msg->longitude;
+  //   gps_msg.altitude = navsat_msg->altitude;
+  //   gps_msg.position_covariance = navsat_msg->position_covariance;
+  //   gps_msg.position_covariance_type = navsat_msg->position_covariance_type;
+  //   gps_msg.status = navsat_msg->status;
+  //   gps_navsat_queue.push_back(gps_msg);
+  // }
 
-  /**
-   * @brief received gps data is added to #gps_queue_
-   * @param gps_msg
-   */
-  void gps_callback(const geographic_msgs::GeoPointStampedPtr& gps_msg) {
-    std::lock_guard<std::mutex> lock(gps_queue_mutex);
-    gps_msg->header.stamp += ros::Duration(gps_time_offset);
-    gps_geopoint_queue.push_back(gps_msg);
-  }
+  // /**
+  //  * @brief received gps data is added to #gps_queue_
+  //  * @param gps_msg
+  //  */
+  // void gps_callback(const geographic_msgs::GeoPointStampedPtr& gps_msg) {
+  //   std::lock_guard<std::mutex> lock(gps_queue_mutex);
+  //   gps_msg->header.stamp += ros::Duration(gps_time_offset);
+  //   gps_geopoint_queue.push_back(gps_msg);
+  // }
 
-  /**
-   * @brief
-   * @return
-   */
-  bool flush_gps_queue() {
-    std::lock_guard<std::mutex> lock(gps_queue_mutex);
+  // /**
+  //  * @brief
+  //  * @return
+  //  */
+  // bool flush_gps_queue() {
+  //   std::lock_guard<std::mutex> lock(gps_queue_mutex);
 
-    if(keyframes.empty() || gps_navsat_queue.empty()) {
-      return false;
-    }
+  //   if(keyframes.empty() || gps_navsat_queue.empty()) {
+  //     return false;
+  //   }
     
-    bool updated = false;
-    auto gps_cursor = gps_navsat_queue.begin();
+  //   bool updated = false;
+  //   auto gps_cursor = gps_navsat_queue.begin();
 
-    for(auto& keyframe : keyframes) {
-      if (keyframe->index - last_gps_edge_index < gps_edge_intervals) continue;
-      if (keyframe->stamp > gps_navsat_queue.back().header.stamp) {
-        break;
-      }
-      if (keyframe->stamp < (*gps_cursor).header.stamp || keyframe->utm_coord) {
-        continue;
-      }
-      // find the gps data which is closest to the keyframe_
-      auto closest_gps = gps_cursor;
-      for(auto gps = gps_cursor; gps != gps_navsat_queue.end(); gps++) {
-        auto dt = ((*closest_gps).header.stamp - keyframe->stamp).toSec();
-        auto dt2 = ((*gps).header.stamp - keyframe->stamp).toSec();
-        if(std::abs(dt) < std::abs(dt2)) {
-          break;
-        }
-        closest_gps = gps;
-      }
-      // if the time residual between the gps and keyframe_ is too large, skip it
-      gps_cursor = closest_gps;
-      if(0.2 < std::abs(((*closest_gps).header.stamp - keyframe->stamp).toSec())) {
-        continue;
-      }
+  //   for(auto& keyframe : keyframes) {
+  //     if (keyframe->index - last_gps_edge_index < gps_edge_intervals) continue;
+  //     if (keyframe->stamp > gps_navsat_queue.back().header.stamp) {
+  //       break;
+  //     }
+  //     if (keyframe->stamp < (*gps_cursor).header.stamp || keyframe->utm_coord) {
+  //       continue;
+  //     }
+  //     // find the gps data which is closest to the keyframe_
+  //     auto closest_gps = gps_cursor;
+  //     for(auto gps = gps_cursor; gps != gps_navsat_queue.end(); gps++) {
+  //       auto dt = ((*closest_gps).header.stamp - keyframe->stamp).toSec();
+  //       auto dt2 = ((*gps).header.stamp - keyframe->stamp).toSec();
+  //       if(std::abs(dt) < std::abs(dt2)) {
+  //         break;
+  //       }
+  //       closest_gps = gps;
+  //     }
+  //     // if the time residual between the gps and keyframe_ is too large, skip it
+  //     gps_cursor = closest_gps;
+  //     if(0.2 < std::abs(((*closest_gps).header.stamp - keyframe->stamp).toSec())) {
+  //       continue;
+  //     }
 
-      // convert (latitude, longitude, altitude) -> (easting, northing, altitude) in UTM coordinate
-      geographic_msgs::GeoPoint gps_geopoint;
-      gps_geopoint.altitude = (*closest_gps).altitude;
-      gps_geopoint.latitude = (*closest_gps).latitude;
-      gps_geopoint.longitude = (*closest_gps).longitude;
-      geodesy::UTMPoint utm;
-      geodesy::fromMsg(gps_geopoint, utm); 
-      Eigen::Vector3d xyz(utm.easting, utm.northing, utm.altitude);
-      double cov_x = (*closest_gps).position_covariance.at(0);
-      double cov_y = (*closest_gps).position_covariance.at(4);
-      double cov_z = (*closest_gps).position_covariance.at(8);
-      if (cov_x > max_gps_edge_stddev_xy || cov_y > max_gps_edge_stddev_xy || cov_z > max_gps_edge_stddev_z)
-        continue;
+  //     // convert (latitude, longitude, altitude) -> (easting, northing, altitude) in UTM coordinate
+  //     geographic_msgs::GeoPoint gps_geopoint;
+  //     gps_geopoint.altitude = (*closest_gps).altitude;
+  //     gps_geopoint.latitude = (*closest_gps).latitude;
+  //     gps_geopoint.longitude = (*closest_gps).longitude;
+  //     geodesy::UTMPoint utm;
+  //     geodesy::fromMsg(gps_geopoint, utm); 
+  //     Eigen::Vector3d xyz(utm.easting, utm.northing, utm.altitude);
+  //     double cov_x = (*closest_gps).position_covariance.at(0);
+  //     double cov_y = (*closest_gps).position_covariance.at(4);
+  //     double cov_z = (*closest_gps).position_covariance.at(8);
+  //     if (cov_x > max_gps_edge_stddev_xy || cov_y > max_gps_edge_stddev_xy || cov_z > max_gps_edge_stddev_z)
+  //       continue;
 
-      // the first gps data position will be the origin of the map
-      // if(!zero_utm) {
-      //   zero_utm = xyz;
-      // }
-      // xyz -= (*zero_utm);
-      keyframe->utm_coord = xyz;
-      Eigen::Vector3d world_coordinate = (utm_to_world * Eigen::Vector4d(utm.easting, utm.northing, utm.altitude, 1)).head(3);
-      Eigen::Vector3d trans_err = keyframe->node->estimate().translation() - world_coordinate;
-      if (trans_err.norm() < 5.0) continue;
-      //********** G2O Edge ***********
-      g2o::OptimizableGraph::Edge* edge;
-      if(std::isnan(world_coordinate.z())) {
-        Eigen::Matrix2d information_matrix = Eigen::Matrix2d::Identity() / cov_x;
-        edge = graph_slam->add_se3_prior_xy_edge(keyframe->node, world_coordinate.head<2>(), information_matrix);
-      } else {
-        Eigen::Matrix3d information_matrix = Eigen::Matrix3d::Identity();
-        information_matrix(0, 0) /= cov_x;
-        information_matrix(1, 1) /= cov_y;
-        information_matrix(2, 2) /= cov_z;
-        edge = graph_slam->add_se3_prior_xyz_edge(keyframe->node, world_coordinate, information_matrix);
-      }
-      graph_slam->add_robust_kernel(edge, private_nh.param<std::string>("gps_edge_robust_kernel", "NONE"), private_nh.param<double>("gps_edge_robust_kernel_size", 1.0));
+  //     // the first gps data position will be the origin of the map
+  //     // if(!zero_utm) {
+  //     //   zero_utm = xyz;
+  //     // }
+  //     // xyz -= (*zero_utm);
+  //     keyframe->utm_coord = xyz;
+  //     Eigen::Vector3d world_coordinate = (utm_to_world * Eigen::Vector4d(utm.easting, utm.northing, utm.altitude, 1)).head(3);
+  //     Eigen::Vector3d trans_err = keyframe->node->estimate().translation() - world_coordinate;
+  //     if (trans_err.norm() < 5.0) continue;
+  //     //********** G2O Edge ***********
+  //     g2o::OptimizableGraph::Edge* edge;
+  //     if(std::isnan(world_coordinate.z())) {
+  //       Eigen::Matrix2d information_matrix = Eigen::Matrix2d::Identity() / cov_x;
+  //       edge = graph_slam->add_se3_prior_xy_edge(keyframe->node, world_coordinate.head<2>(), information_matrix);
+  //     } else {
+  //       Eigen::Matrix3d information_matrix = Eigen::Matrix3d::Identity();
+  //       information_matrix(0, 0) /= cov_x;
+  //       information_matrix(1, 1) /= cov_y;
+  //       information_matrix(2, 2) /= cov_z;
+  //       edge = graph_slam->add_se3_prior_xyz_edge(keyframe->node, world_coordinate, information_matrix);
+  //     }
+  //     graph_slam->add_robust_kernel(edge, private_nh.param<std::string>("gps_edge_robust_kernel", "NONE"), private_nh.param<double>("gps_edge_robust_kernel_size", 1.0));
 
-      last_gps_edge_index = keyframe->index;
-      updated = true;
-    }
+  //     last_gps_edge_index = keyframe->index;
+  //     updated = true;
+  //   }
     
-    auto remove_loc = std::upper_bound(gps_navsat_queue.begin(), gps_navsat_queue.end(), keyframes.back()->stamp, [=](const ros::Time& stamp, const sensor_msgs::NavSatFix& geopoint) { return stamp < geopoint.header.stamp; });
-    gps_navsat_queue.erase(gps_navsat_queue.begin(), remove_loc);
+  //   auto remove_loc = std::upper_bound(gps_navsat_queue.begin(), gps_navsat_queue.end(), keyframes.back()->stamp, [=](const ros::Time& stamp, const sensor_msgs::NavSatFix& geopoint) { return stamp < geopoint.header.stamp; });
+  //   gps_navsat_queue.erase(gps_navsat_queue.begin(), remove_loc);
     
-    return updated;
-  }
+  //   return updated;
+  // }
   
   void command_callback(const std_msgs::String& str_msg) {
     if (str_msg.data == "output_aftmapped") {

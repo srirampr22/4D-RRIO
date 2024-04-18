@@ -131,7 +131,7 @@ public:
         static nav_msgs::Path imuPath;
         static double last_path_time = -1;
         double imuTime = imuOdomQueue.back().header.stamp.toSec();
-        if (imuTime -last_path_time > 0.1) {
+        if (imuTime - last_path_time > 0.1) {
             last_path_time = imuTime;
             geometry_msgs::PoseStamped this_pose_stamped;
             this_pose_stamped.header.stamp = imuOdomQueue.back().header.stamp;
@@ -140,13 +140,13 @@ public:
             imuPath.poses.push_back(this_pose_stamped);
             while(!imuPath.poses.empty() && imuPath.poses.front().header.stamp.toSec() < radarOdomTime - 1.0)
                 imuPath.poses.erase(imuPath.poses.begin());
-            if (pubImuPath.getNumSubscribers() != 0)
-            {
-                imuPath.header.stamp = imuOdomQueue.back().header.stamp;
-                imuPath.header.frame_id = odometryFrame;
-                pubImuPath.publish(imuPath);
+            // if (pubImuPath.getNumSubscribers() != 0)
+            // {
+            imuPath.header.stamp = imuOdomQueue.back().header.stamp;
+            imuPath.header.frame_id = odometryFrame;
+            pubImuPath.publish(imuPath);
                 
-            }
+            // }
 
         }
 
@@ -201,30 +201,66 @@ public:
 
     int key = 1;
 
-    // T_bl: radar frame to imu frame
+    // T_ri: radar frame to imu frame
     // 0.999735807578		-0.0215215701795	-0.0081643477385	-0.3176955976234
     // -0.02148120581797	-0.9997581134183	0.00502853428037	-0.13761019052125
     // -0.00826995351904	-0.0048509797951	-0.99995400578406	0.05898352725152
     // 0			0			0			1
+    // T_rl: radar to lidar frame
+    //     Radar_to_livox = [0.9987420694356727, -0.02154593184251807, 0.04527979957349116, 0.2960016945940701;
+    //  0.02057017793626469, 0.9995486686923027, 0.02190458926318335, -0.1298868374575176;
+    //  -0.04573127973037173, -0.02094561026271845, 0.9987339684250071, -0.004543126256660535;
+    //  0, 0, 0, 1]
+    // T_li: lidar to imu frame
+    // lidar to imu :  0.998572 -0.00112588  -0.0534225   -0.613664
+    // 0.000314157   -0.999638   0.0269451   -0.267421
+    // -0.0534327  -0.0269225   -0.998209   0.0667678
+    //         0           0           0           1
 
-    //roataion in quaternion
-    // double qx = 0.9999307, qy = -0.0107514, qz = -0.0041089, qw = -0.00247;
-    double qx = 0.9998768, qy = -0.0143339, qz = -0.005478, qw = -0.0032931;
-    // translation
-    double x = -0.3176955976234, y = -0.13761019052125, z = 0.05898352725152;
+    double qx=-0.0269256, qy=0.0000102, qz=0.0003139, qw=0.9996374; 
+    double x = -0.613664, y = -0.267421, z = 0.0667678;
+
+    // Eigen::Matrix4d T_ri = (Eigen::Matrix4d() << 
+    // 0.999735807578, -0.0215215701795, -0.0081643477385, -0.3176955976234,
+    // -0.02148120581797, -0.9997581134183, 0.00502853428037, -0.13761019052125,
+    // -0.00826995351904, -0.0048509797951, -0.99995400578406, 0.05898352725152,
+    // 0, 0, 0, 1).finished();
+
+    // // Initialize T_rl (radar to lidar frame)
+    // Eigen::Matrix4d T_rl = (Eigen::Matrix4d() << 
+    //     0.9987420694356727, -0.02154593184251807, 0.04527979957349116, 0.2960016945940701,
+    //     0.02057017793626469, 0.9995486686923027, 0.02190458926318335, -0.1298868374575176,
+    //     -0.04573127973037173, -0.02094561026271845, 0.9987339684250071, -0.004543126256660535,
+    //     0, 0, 0, 1).finished();
+
+    // Eigen::Matrix4d T_li = T_ri * T_rl.inverse();
+
+    // //roataion in quaternion
+    // double qx = 0.9998768, qy = -0.0143339, qz = -0.005478, qw = -0.0032931;
+    // // translation
+    // double x = -0.3176955976234, y = -0.13761019052125, z = 0.05898352725152;
 
     gtsam::Rot3 rotation = gtsam::Rot3::Quaternion(qw, qx, qy, qz);
 
     // T_bl: tramsform points from radar frame to imu frame 
     gtsam::Pose3 radar2imu = gtsam::Pose3(rotation, gtsam::Point3(x, y, z));
-    gtsam::Pose3 imu2radar = radar2imu.inverse();
-    // T_lb: tramsform points from imu frame to lidar frame
-    // gtsam::Pose3 radar2imu = gtsam::Pose3(gtsam::Rot3(1, 0, 0, 0), gtsam::Point3(extTrans.x(), extTrans.y(), extTrans.z()));
 
-    IMUPreintegration()
+    // T_lb: tramsform points from imu frame to lidar frame (Not sure if this is correct)
+    gtsam::Pose3 imu2radar = radar2imu.inverse();
+
+    // IMU noise values
+    double init_ax_bias = 0.001;  // Example values
+    double init_ay_bias = 0.001;
+    double init_az_bias = 0.001;
+    double init_gx_bias = 0.001;
+    double init_gy_bias = 0.001;
+    double init_gz_bias = 0.001;
+
+
+    IMUPreintegration():imuAccNoise(0.0022281160035059417), imuGyrNoise(0.00011667951042710442), imuAccBiasN(0.00011782392708033614), imuGyrBiasN( 2.616129872371749e-06), imuGravity(9.80511)
     {
         subImu = nh.subscribe<sensor_msgs::Imu>  ("/vectornav/imu", 2000, &IMUPreintegration::imuHandler, this, ros::TransportHints().tcpNoDelay());
-        subOdometry = nh.subscribe<nav_msgs::Odometry>("/radar_incremental_odom", 15, &IMUPreintegration::odometryHandler, this, ros::TransportHints().tcpNoDelay());
+        subOdometry = nh.subscribe<nav_msgs::Odometry>("/radar_incremental_odom", 30, &IMUPreintegration::odometryHandler, this, ros::TransportHints().tcpNoDelay());
 
         pubImuOdometry = nh.advertise<nav_msgs::Odometry> ("/imu_odom_incremental", 2000);
 
@@ -232,7 +268,7 @@ public:
         p->accelerometerCovariance  = gtsam::Matrix33::Identity(3,3) * pow(imuAccNoise, 2); // acc white noise in continuous
         p->gyroscopeCovariance      = gtsam::Matrix33::Identity(3,3) * pow(imuGyrNoise, 2); // gyro white noise in continuous
         p->integrationCovariance    = gtsam::Matrix33::Identity(3,3) * pow(1e-4, 2); // error committed in integrating position from velocities
-        gtsam::imuBias::ConstantBias prior_imu_bias((gtsam::Vector(6) << 0, 0, 0, 0, 0, 0).finished());; // assume zero initial bias
+        gtsam::imuBias::ConstantBias prior_imu_bias((gtsam::Vector(6) << init_ax_bias, init_ay_bias, init_az_bias, init_gx_bias, init_gy_bias, init_gz_bias).finished()); // assume zero initial bias
 
         priorPoseNoise  = gtsam::noiseModel::Diagonal::Sigmas((gtsam::Vector(6) << 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2).finished()); // rad,rad,rad,m, m, m
         priorVelNoise   = gtsam::noiseModel::Isotropic::Sigma(3, 1e4); // m/s
@@ -294,6 +330,8 @@ public:
         if(odomMsg == nullptr) {
             ROS_INFO("radarOdomIncreMsg is empty");
         }
+
+        // cout<<"lidar to imu"<<T_li<<endl;
 
 
         double currentCorrectionTime = ROS_TIME(odomMsg);
@@ -422,6 +460,7 @@ public:
             else
                 break;
         }
+
         // add imu factor to graph
         const gtsam::PreintegratedImuMeasurements& preint_imu = dynamic_cast<const gtsam::PreintegratedImuMeasurements&>(*imuIntegratorOpt_);
         gtsam::ImuFactor imu_factor(X(key - 1), V(key - 1), X(key), V(key), B(key - 1), preint_imu);
@@ -573,6 +612,12 @@ public:
 private:
     tf::TransformBroadcaster odom2imu_broadcaster; // map => odom_frame
     geometry_msgs::TransformStamped transformStamped;
+
+    double imuAccNoise;
+    double imuGyrNoise;
+    double imuAccBiasN;
+    double imuGyrBiasN;
+    double imuGravity;
 };
 
 

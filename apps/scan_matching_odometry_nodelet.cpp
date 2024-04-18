@@ -369,6 +369,7 @@ private:
     Eigen::Matrix4d pose = matching(cloud_msg->header.stamp, cloud);
     geometry_msgs::TwistWithCovariance twist = twistMsg->twist;
     // publish map to odom frame
+    cout<<"map frame: "<<mapFrame<<", odom frame: "<<odometryFrame<<endl;
     publish_odometry(cloud_msg->header.stamp, mapFrame, odometryFrame, pose, twist);
 
     // In offline estimation, point clouds will be supplied until the published time
@@ -434,6 +435,7 @@ private:
     // Set Source Cloud
     registration_s2s->setInputSource(filtered);
     if (enable_scan_to_map)
+      ROS_INFO_STREAM("Set source cloud for scan-to-map registration");
       registration_s2m->setInputSource(filtered);
 
     std::string msf_source;
@@ -484,6 +486,7 @@ private:
     // transition matrix is too large, it will be discarded
     bool thresholded = false;
     if(enable_transform_thresholding) {
+      // ROS_INFO_STREAM("Transform thresholding");
       Eigen::Matrix4d radar_delta;
       if(enable_scan_to_map) radar_delta = prev_trans_s2m.inverse() * trans_s2m;
       else radar_delta = prev_trans_s2s.inverse() * trans_s2s;
@@ -499,6 +502,7 @@ private:
 
       if (enable_imu_thresholding) {
         // Use IMU orientation to determine whether the matching result is good or not
+        ROS_INFO_STREAM("IMU thresholding");
         sensor_msgs::Imu frame_imu;
         Eigen::Matrix3d rot_imu = Eigen::Matrix3d::Identity();
         auto result = get_closest_imu(stamp);
@@ -584,7 +588,7 @@ private:
       keyframes.push_back(keyframe);
 
       // record keyframe's imu
-      flush_imu_queue();
+      // flush_imu_queue();
 
       if (enable_scan_to_map){
         pcl::PointCloud<PointT>::Ptr submap_cloud(new pcl::PointCloud<PointT>());

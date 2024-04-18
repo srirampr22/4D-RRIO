@@ -73,7 +73,7 @@ GraphSLAM::GraphSLAM(const std::string& solver_type) {
     std::cin.ignore(1);
     return;
   }
-  std::cout << "done" << std::endl;
+  // std::cout << "done" << std::endl;
 
   robust_kernel_factory = g2o::RobustKernelFactory::instance();
 }
@@ -88,7 +88,7 @@ GraphSLAM::~GraphSLAM() {
 void GraphSLAM::set_solver(const std::string& solver_type) {
   g2o::SparseOptimizer* graph = dynamic_cast<g2o::SparseOptimizer*>(this->graph.get());
 
-  std::cout << "construct solver: " << solver_type << std::endl;
+  // std::cout << "construct solver: " << solver_type << std::endl;
   g2o::OptimizationAlgorithmFactory* solver_factory = g2o::OptimizationAlgorithmFactory::instance();
   g2o::OptimizationAlgorithmProperty solver_property;
   g2o::OptimizationAlgorithm* solver = solver_factory->construct(solver_type, solver_property);
@@ -356,27 +356,27 @@ int GraphSLAM::optimize(int num_iterations) {
     return -1;
   }
 
-  std::cout << std::endl;
-  std::cout << "--- pose graph optimization ---" << std::endl;
-  std::cout << "nodes: " << graph->vertices().size() << "   edges: " << graph->edges().size() << std::endl;
-  std::cout << "optimizing... " << std::flush;
+  // std::cout << std::endl;
+  // std::cout << "--- pose graph optimization ---" << std::endl;
+  // std::cout << "nodes: " << graph->vertices().size() << "   edges: " << graph->edges().size() << std::endl;
+  // std::cout << "optimizing... " << std::flush;
 
-  std::cout << "init" << std::endl;
+  // std::cout << "init" << std::endl;
   graph->initializeOptimization();
   graph->setVerbose(false);  // Open/Close debug output
 
-  std::cout << "chi2" << std::endl;
+  // std::cout << "chi2" << std::endl;
   double chi2 = graph->chi2();
 
-  std::cout << "optimizing!!" << std::endl;
+  // std::cout << "optimizing!!" << std::endl;
   auto t1 = ros::WallTime::now();
   int iterations = graph->optimize(num_iterations);
 
   auto t2 = ros::WallTime::now();
-  std::cout << "done" << std::endl;
-  std::cout << "iterations: " << iterations << " / " << num_iterations << std::endl;
-  std::cout << "chi2: (before)" << chi2 << " -> (after)" << graph->chi2() << std::endl;
-  std::cout << "time: " << boost::format("%.3f") % (t2 - t1).toSec() << "[sec]" << std::endl;
+  // std::cout << "done" << std::endl;
+  // std::cout << "iterations: " << iterations << " / " << num_iterations << std::endl;
+  // std::cout << "chi2: (before)" << chi2 << " -> (after)" << graph->chi2() << std::endl;
+  // std::cout << "time: " << boost::format("%.3f") % (t2 - t1).toSec() << "[sec]" << std::endl;
 
   return iterations;
 }

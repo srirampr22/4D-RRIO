@@ -99,6 +99,7 @@ private:
     void initialize_params() {
     auto& pnh = private_nh;
     points_topic = pnh.param<std::string>("points_topic", "/radar_enhanced_pcl");
+    use_ego_vel = pnh.param<bool>("use_ego_vel", true);
 
     // Incremental odom params
     transformtobemapped[0] = 0; // roll
@@ -111,7 +112,7 @@ private:
     radarIncrementalAffine = Eigen::Affine3f::Identity();
     radar_delta = Eigen::Matrix4d::Identity();
 
-    // is_increInitialized = false;
+    is_increInitialized = false;
     // radarIncrementalOdom = Eigen::Affine3f::Identity();
 
     // Registration validation by thresholding
@@ -123,10 +124,14 @@ private:
     max_diff_angle = pnh.param<double>("max_diff_angle", 0.8);
     max_egovel_cum = pnh.param<double>("max_egovel_cum", 1.0);
 
+    keyframe_delta_trans = pnh.param<double>("keyframe_delta_trans", 0.25);
+    keyframe_delta_angle = pnh.param<double>("keyframe_delta_angle", 0.15);
+    keyframe_delta_time = pnh.param<double>("keyframe_delta_time", 1.0);
+
     map_cloud_resolution = pnh.param<double>("map_cloud_resolution", 0.05);
     keyframe_updater.reset(new radar_graph_slam::KeyframeUpdater(pnh));
 
-    enable_scan_to_map = pnh.param<bool>("enable_scan_to_map", true);
+    enable_scan_to_map = pnh.param<bool>("enable_scan_to_map", false);
     max_submap_frames = pnh.param<int>("max_submap_frames", 10); // 5
 
     // enable_imu_fusion = private_nh.param<bool>("enable_imu_fusion", false);
@@ -171,7 +176,7 @@ private:
       cout<<"twistMsg or cloud_msg is invalid"<<endl;
     }
 
-    timeLaserOdometry = cloud_msg->header.stamp.toSec();
+    // timeLaserOdometry = cloud_msg->header.stamp.toSec();
     double this_cloud_time = cloud_msg->header.stamp.toSec();
     static double last_cloud_time = this_cloud_time;
 
@@ -180,15 +185,18 @@ private:
     double egovel_cum_y = twistMsg->twist.twist.linear.y * dt;
     double egovel_cum_z = twistMsg->twist.twist.linear.z * dt;
 
-    // If too large, set 0
-    if (pow(egovel_cum_x,2)+pow(egovel_cum_y,2)+pow(egovel_cum_z,2) > pow(max_egovel_cum, 2)) {
-      cout << "Too large egovel_cum: " << sqrt(pow(egovel_cum_x,2)+pow(egovel_cum_y,2)+pow(egovel_cum_z,2)) << endl; // if it is to large it is set to its original value identiy
-    }
-    // else egovel_cum.block<3, 1>(0, 3) = Eigen::Vector3d(egovel_cum_x, egovel_cum_y, egovel_cum_z);
-    else {
-      egovel_cum.block<3, 1>(0, 3) = Eigen::Vector3d(egovel_cum_x, egovel_cum_y, egovel_cum_z);
-      // cout<<"egovel_cum: "<<egovel_cum<<endl;
-    }
+    // // If too large, set 0
+    // if (pow(egovel_cum_x,2)+pow(egovel_cum_y,2)+pow(egovel_cum_z,2) > pow(max_egovel_cum, 2)) {
+    //   cout << "Too large egovel_cum: " << sqrt(pow(egovel_cum_x,2)+pow(egovel_cum_y,2)+pow(egovel_cum_z,2)) << endl; // if it is to large it is set to its original value identiy
+    // }
+    // // else egovel_cum.block<3, 1>(0, 3) = Eigen::Vector3d(egovel_cum_x, egovel_cum_y, egovel_cum_z);
+    // else {
+    //   egovel_cum.block<3, 1>(0, 3) = Eigen::Vector3d(egovel_cum_x, egovel_cum_y, egovel_cum_z);
+    //   // cout<<"egovel_cum: "<<egovel_cum<<endl;
+    // }
+
+    if (pow(egovel_cum_x,2)+pow(egovel_cum_y,2)+pow(egovel_cum_z,2) > pow(max_egovel_cum, 2));
+    else egovel_cum.block<3, 1>(0, 3) = Eigen::Vector3d(egovel_cum_x, egovel_cum_y, egovel_cum_z);
 
     // egovel_cum.block<3, 1>(0, 3) = Eigen::Vector3d(egovel_cum_x, egovel_cum_y, egovel_cum_z);
     
@@ -221,7 +229,7 @@ private:
     Eigen::Affine3f delta_Affine(radar_delta.cast<float>());
     Eigen::Affine3f currAffinePose(pose_in.cast<float>());
     static nav_msgs::Odometry radarIncrementalOdom;
-    static bool is_increInitialized = false;
+    // static bool is_increInitialized = false;
     // publish the transform
     if (is_increInitialized == false) {
       is_increInitialized = true;
@@ -351,15 +359,17 @@ private:
     double time_used = chrono::duration_cast<chrono::duration<double>>(t2 - t1).count();
     s2s_matching_time.push_back(time_used);
 
-    // publish_scan_matching_status(stamp, cloud->header.frame_id, aligned, msf_source, msf_delta);
+    publish_scan_matching_status(stamp, cloud->header.frame_id, aligned, msf_source, msf_delta);
 
     // If not converged, use last transformation
-    // if(!registration_s2s->hasConverged()) {
-    //   ROS_INFO("scan matching_ has not converged!!");
-    //   // ROS_INFO("ignore this frame(" << stamp << ")");
-    //   if (enable_scan_to_map) return keyframe_pose_s2m * prev_trans_s2m;
-    //   else return keyframe_pose_s2s * prev_trans_s2s;
-    // }
+    if(!registration_s2s->hasConverged()) {
+      ROS_INFO("scan matching_ has not converged!!");
+      // ROS_INFO("ignore this frame(" << stamp << ")");
+      Eigen::Matrix4d last_keyframe_pose_s2s = keyframe_pose_s2s * prev_trans_s2s;
+      Eigen::Matrix4d last_keyframe_pose_s2m = keyframe_pose_s2m * prev_trans_s2m;
+      if (enable_scan_to_map) return std::make_pair(last_keyframe_pose_s2m, last_radar_delta);
+      else return std::make_pair(last_keyframe_pose_s2s, last_radar_delta);
+    }
     // else {
     //   ROS_INFO("scan matching_ has converged!!");
     // }
@@ -372,7 +382,7 @@ private:
     if (enable_scan_to_map){
       registration_s2m->align(*aligned, guess.cast<float>());
       if(!registration_s2m->hasConverged()) {
-        ROS_INFO("scan matching_ has not converged!!");
+        // ROS_INFO("scan matching_ has not converged!!");
         Eigen::Matrix4d last_keyframe_pose_s2m = keyframe_pose_s2m * prev_trans_s2m;
         return std::make_pair(last_keyframe_pose_s2m, last_radar_delta);
         // return keyframe_pose_s2m * prev_trans_s2m;
@@ -394,7 +404,8 @@ private:
       rotation_vector.fromRotationMatrix(radar_delta.block<3, 3>(0, 0));
       double da_rd = rotation_vector.angle(); // This is the delta angle of rotation
       Eigen::Matrix3d rot_rd = radar_delta.block<3, 3>(0, 0).cast<double>();
-      bool too_large_trans = dx_rd > max_acceptable_trans || da_rd > max_acceptable_angle; // This is a boolean value that checks if the translation or rotation is too large
+      // bool too_large_trans = dx_rd > max_acceptable_trans || da_rd > max_acceptable_angle; // This is a boolean value that checks if the translation or rotation is too large
+      bool too_large_trans = false;
       double da, dx, delta_rot_imu = 0;
       Eigen::Matrix3d matrix_rot; Eigen::Vector3d delta_trans_egovel; 
 
@@ -411,7 +422,6 @@ private:
         }
 
       last_radar_delta = radar_delta;
-
     }
 
     prev_time = stamp;
@@ -480,6 +490,44 @@ private:
    
   }
 
+  void publish_scan_matching_status(const ros::Time& stamp, const std::string& frame_id, pcl::PointCloud<pcl::PointXYZI>::ConstPtr aligned, const std::string& msf_source, const Eigen::Isometry3d& msf_delta) {
+    if(!status_pub.getNumSubscribers()) {
+      return;
+    }
+
+    // ScanMatchingStatus status;
+    // status.header.frame_id = frame_id;
+    // status.header.stamp = stamp;
+    // status.has_converged = registration_s2s->hasConverged();
+    // status.matching_error = registration_s2s->getFitnessScore();
+
+    const double max_correspondence_dist = 0.5;
+
+    int num_inliers = 0;
+    std::vector<int> k_indices;
+    std::vector<float> k_sq_dists;
+    for(int i=0; i<aligned->size(); i++) {
+      const auto& pt = aligned->at(i);
+      registration_s2s->getSearchMethodTarget()->nearestKSearch(pt, 1, k_indices, k_sq_dists);
+      if(k_sq_dists[0] < max_correspondence_dist * max_correspondence_dist) {
+        num_inliers++;
+      }
+    }
+    // status.inlier_fraction = static_cast<float>(num_inliers) / aligned->size();
+
+    // status.relative_pose = isometry2pose(Eigen::Isometry3d(registration_s2s->getFinalTransformation().cast<double>()));
+
+    // if(!msf_source.empty()) {
+    //   status.prediction_labels.resize(1);
+    //   status.prediction_labels[0].data = msf_source;
+
+    //   status.prediction_errors.resize(1);
+    //   Eigen::Isometry3d error = Eigen::Isometry3d(registration_s2s->getFinalTransformation().cast<double>()).inverse() * msf_delta;
+    //   status.prediction_errors[0] = isometry2pose(error.cast<double>());
+    // }
+
+    // status_pub.publish(status);
+  }
 
   // ROS topics
   ros::NodeHandle nh;
@@ -512,15 +560,12 @@ private:
   // static bool is_increInitialized;
 
   static Eigen::Affine3f prev_pose;
+  bool is_increInitialized;
   float transformtobemapped[6];
   Eigen::Matrix4d radar_delta;
 
   Eigen::Affine3f radarIncrementalAffine;
-  
-
   ros::Publisher odom_incremental_pub;
-
-
 
   // Submap
   ros::Publisher submap_pub;
