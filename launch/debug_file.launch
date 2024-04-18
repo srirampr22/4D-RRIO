@@ -44,7 +44,7 @@
   <node pkg="nodelet" type="nodelet" name="$(arg nodelet_manager)" args="manager" output="screen"/>
 
   <!-- radar_preprocessing_nodelet -->
-  <node pkg="nodelet" type="nodelet" name="radar_preprocessing_nodelet" args="standalone radar_graph_slam/PreprocessingNodelet $(arg nodelet_manager)">
+  <node pkg="nodelet" type="nodelet" name="radar_preprocessing_nodelet" args="standalone radar_graph_slam/PreprocessingNodelet $(arg nodelet_manager)" output="screen">
     <!-- distance filter -->
     <param name="use_distance_filter" value="true" />
     <param name="distance_near_thresh" value="2" />
