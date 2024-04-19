@@ -7,9 +7,9 @@
 
 4D-RIO can operate in adverse wheather. We did a experiment in which sensors are covered by dense ***Smoke***. The Lidar SLAM (R2LIVE) failed, but our 4DRadarSLAM is not affected by it, thanks to the penetration of millimeter waves to small objects such as smoke and rain.
 
-<p align='center'>
+<!-- <p align='center'>
     <img src="./doc/mapping_smoke.gif" alt="drawing" width="800"/>
-</p>
+</p> -->
 
 
 ## 1. Dependency
@@ -23,13 +23,13 @@ ROS Melodic or Noetic. [ROS Installation](http://wiki.ros.org/ROS/Installation):
 - PCL
 - g2o
 ### 1.3 The following ROS packages are required:
-- geodesy
-- nmea_msgs
-- pcl_ros
-- LivoxLidarMsg_to_Pointcloud2_ros (https://github.com/srirampr22/LivoxLidarMsg_to_Pointcloud2_ros)
-- ndt_omp (https://github.com/koide3/ndt_omp)
-- livox_ros_driver (https://github.com/Livox-SDK/livox_ros_driver)
-- Our modified [fast_apdgicp](https://github.com/zhuge2333/fast_apdgicp), in which Adaptive Probability Distribution GICP algorithum module is added. The original is [fast_gicp](https://github.com/SMRT-AIST/fast_gicp)
+- [geodesy]
+- [nmea_msgs]
+- [pcl_ros]
+- [LivoxLidarMsg_to_Pointcloud2_ros] (https://github.com/srirampr22/LivoxLidarMsg_to_Pointcloud2_ros)
+- [ndt_omp] (https://github.com/koide3/ndt_omp)
+- [livox_ros_driver] (https://github.com/Livox-SDK/livox_ros_driver)
+- [fast_apdgicp](https://github.com/zhuge2333/fast_apdgicp), in which Adaptive Probability Distribution GICP algorithum module is added. The original is [fast_gicp](https://github.com/SMRT-AIST/fast_gicp)
 ```
     sudo apt-get install ros-XXX-geodesy ros-XXX-pcl-ros ros-XXX-nmea-msgs ros-XXX-libg2o
 ```
@@ -45,7 +45,7 @@ ROS Melodic or Noetic. [ROS Installation](http://wiki.ros.org/ROS/Installation):
 - *scan_matching_odometry_node*
 - *imu_preintegration_node*
 
-The input point cloud is first downsampled by ***preprocessing_nodelet***; the radar pointcloud is transformed to Livox LiDAR frame; estimate its ego velocity and remove dynamic objects, and then passed to the next nodelets. While scan_matching_odometry_nodelet estimates the sensor pose by iteratively applying a scan matching between consecutive frames (i.e., odometry estimation). 
+The input point cloud is first downsampled by ***preprocessing_nodelet***; the radar pointcloud is transformed to Livox LiDAR frame; estimate its ego velocity and remove dynamic objects, and then passed to the next nodelets. While scan_matching_odometry_nodelet estimates the sensor pose by iteratively applying a scan matching between consecutive frames (i.e., odometry estimation). the imu_preintegration_node handles the fusion of high rate IMU data from a 9 axis VectorNav-100 IMU leveraging On-Manifold IMU-Preintegration and Graph optimization via Incremental smoothing.
 
 <div align="center">
     <img src="doc/fig_flowchart_system.png" width = 100% >
@@ -66,15 +66,6 @@ Point uncertainty parameters:
 - ***elevation_var***
 
 *dist_var* means the uncertainty of a point’s range measurement at 100m range, *azimuth_var* and *elevation_var* denote the azimuth and elevation angle accuracy (degree)
-
-### 3.2 Loop detection 
-- ***accum_distance_thresh***: Minimum distance beteen two edges of the loop
-- ***min_loop_interval_dist***: Minimum distance between a new loop edge and the last one
-- ***max_baro_difference***: Maximum altitude difference beteen two edges' odometry
-- ***max_yaw_difference***: Maximum yaw difference beteen two edges' odometry
-- ***odom_check_trans_thresh***: Translation threshold of Odometry Check
-- ***odom_check_rot_thresh***: Rotation threshold of Odometry Check
-- ***sc_dist_thresh***: Matching score threshold of Scan Context
 
 
 ## 4. Run the package

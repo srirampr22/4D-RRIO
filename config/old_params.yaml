@@ -3,14 +3,14 @@ radar_slam:
   # Topics
   pointCloudTopic: "/radar_enhanced_pcl"               # Point cloud data <!-- pc2_raw inlier_pc2 segmented -->
   imuTopic: "/vectornav/imu"                         # IMU data
-  odomTopic: "/odom"                   # IMU pre-preintegration odometry, same frequency as IMU
+  odomTopic: "/radar_odom"                   # IMU pre-preintegration odometry, same frequency as IMU
   gpsTopic: "/ublox/fix"                   # GPS odometry topic from navsat, see module_navsat.launch file
 
   # Frames
   lidarFrame: ""
-  baselinkFrame: "base_link"
+  baselinkFrame: "car_link"
   odometryFrame: "odom"
-  mapFrame: "map"
+  mapFrame: "world"
 
   # GPS Settings
   # useGpsElevation: false                      # if GPS elevation is bad, set to "false"
