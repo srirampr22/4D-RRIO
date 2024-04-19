@@ -3,6 +3,11 @@
   <!-- Parameters -->
   <rosparam file="$(find radar_graph_slam)/config/old_params.yaml" command="load" />
   <param name="use_sim_time" value="true"/>
+
+  <node pkg="tf2_ros" type="static_transform_publisher" name="world_to_robot_broadcaster" args="0 0 0 0 0 0 1 world odom" />
+
+  <node name="imu_preintegration_node" pkg="radar_graph_slam" type="imu_preintegration_node" output="screen">
+  </node>
   
   <!-- arguments -->
   <arg name="nodelet_manager" default="radarslam_nodelet_manager" />
@@ -10,10 +15,8 @@
   <arg name="enable_barometer" default="false" /> <!-- barometer altitude constraint, not used -->
   <arg name="barometer_edge_type" default="1" /> <!-- not used -->
   <arg name="enable_gps" default="false" />
-  <arg name="enable_dynamic_object_removal" default="false" />
+  <arg name="enable_dynamic_object_removal" default="true" />
   <arg name="enable_frontend_ego_vel" default="true" />
-  <arg name="enable_preintegration" default="false" /> <!-- not used -->
-
   <arg name="keyframe_delta_trans_front_end" default="0.5" />
   <arg name="keyframe_delta_trans_back_end" default="2" /><!-- 1 2 -->
   <arg name="keyframe_delta_angle" default="0.2612" /><!-- 10°: 0.1745 15°: 0.2612 -->
@@ -28,12 +31,6 @@
   <arg name="dist_var" default="0.86" />
   <arg name="azimuth_var" default="0.5" />
   <arg name="elevation_var" default="1.0" /><!-- 1.0 -->
-
-  <!-- optional arguments -->
-  <arg name="enable_robot_odometry_init_guess" default="false" /> <!-- not used -->
-
-  <!-- transformation between lidar and base_link -->
-  <!-- <node pkg="tf" type="static_transform_publisher" name="imu2radar_publisher" args="0 0 0 0 0 0 map odom 10" /> -->
   
   <node pkg="nodelet" type="nodelet" name="$(arg nodelet_manager)" args="manager" output="screen"/>
 
@@ -70,7 +67,7 @@
     <param name="keyframe_delta_trans" value="$(arg keyframe_delta_trans_front_end)" />
     <param name="keyframe_delta_angle" value="$(arg keyframe_delta_angle)" /> 
     <param name="keyframe_min_size" value="100" />
-    <param name="enable_robot_odometry_init_guess" value="$(arg enable_robot_odometry_init_guess)" />
+    <param name="enable_robot_odometry_init_guess" value="false" />
     <param name="enable_transform_thresholding" value="$(arg enable_transform_thresholding)" />
     <param name="enable_imu_thresholding" value="false" /> <!-- bad effect, not used -->
     <param name="max_acceptable_trans" value="1.0" />
@@ -166,11 +163,9 @@
     <param name="max_gps_edge_stddev_z" value="3.0" />
     <param name="gps_edge_intervals" value="15" />
     <param name="dataset_name" value="loop2" />
-    <!-- Preintegration --> <!-- bad effect, not used -->
-    <param name="enable_preintegration" value="$(arg enable_preintegration)" />
-      <param name="use_egovel_preinteg_trans" value="false" /><!-- Ego Velocity Integration - Translation -->
-      <param name="preinteg_orient_stddev" value="1" />
-      <param name="preinteg_trans_stddev" value="5" />
+    <param name="use_egovel_preinteg_trans" value="false" /><!-- Ego Velocity Integration - Translation -->
+    <param name="preinteg_orient_stddev" value="1" />
+    <param name="preinteg_trans_stddev" value="5" />
     <!-- scan matching -->
     <!-- robust kernels: NONE, Cauchy, DCS, Fair, GemanMcClure, Huber, PseudoHuber, Saturated, Tukey, Welsch -->
     <param name="odometry_edge_robust_kernel" value="NONE" />
@@ -193,7 +188,7 @@
     <param name="show_sphere" value="false" />
   </node>
 
-  <node pkg="rviz" type="rviz" name="rviz_slam" args="-d $(find radar_graph_slam)/rviz/radar_graph_slam.rviz" respawn="true"/>
+  <node pkg="rviz" type="rviz" name="rviz_slam" args="-d $(find radar_graph_slam)/rviz/4D_RIO_rviz.rviz" respawn="true"/>
 
   <!--- Rosbag Play -->
   <!-- <include file="$(find radar_graph_slam)/launch/rosbag_play_radar_carpark1.launch" /> -->
