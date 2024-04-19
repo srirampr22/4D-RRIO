@@ -94,11 +94,13 @@ public:
     read_until_pub = nh.advertise<std_msgs::Header>("/scan_matching_odometry/read_until", 32);
     // Odometry of Radar scan-matching_
     odom_pub = nh.advertise<nav_msgs::Odometry>(odomTopic, 32);
+    odom_incremental_pub = nh.advertise<nav_msgs::Odometry>("/radar_incremental_odom", 32);
     // Transformation of Radar scan-matching_
     trans_pub = nh.advertise<geometry_msgs::TransformStamped>("/scan_matching_odometry/transform", 32);
     status_pub = private_nh.advertise<ScanMatchingStatus>("/scan_matching_odometry/status", 8);
     aligned_points_pub = nh.advertise<sensor_msgs::PointCloud2>("/aligned_points", 32);
     submap_pub = nh.advertise<sensor_msgs::PointCloud2>("/radar_graph_slam/submap", 2);
+
   }
 
 private:
@@ -115,6 +117,11 @@ private:
     keyframe_delta_trans = pnh.param<double>("keyframe_delta_trans", 0.25);
     keyframe_delta_angle = pnh.param<double>("keyframe_delta_angle", 0.15);
     keyframe_delta_time = pnh.param<double>("keyframe_delta_time", 1.0);
+
+    radarIncrementalAffine = Eigen::Affine3f::Identity();
+    radar_delta = Eigen::Matrix4d::Identity();
+
+    is_increInitialized = false;
 
     // Registration validation by thresholding
     enable_transform_thresholding = pnh.param<bool>("enable_transform_thresholding", false);
@@ -365,21 +372,38 @@ private:
     pcl::PointCloud<PointT>::Ptr cloud(new pcl::PointCloud<PointT>());
     pcl::fromROSMsg(*cloud_msg, *cloud);
 
-    // Matching
-    Eigen::Matrix4d pose = matching(cloud_msg->header.stamp, cloud);
+    // // Matching
+    // Eigen::Matrix4d pose = matching(cloud_msg->header.stamp, cloud);
+    // geometry_msgs::TwistWithCovariance twist = twistMsg->twist;
+    // // publish map to odom frame
+    // cout<<"map frame: "<<mapFrame<<", odom frame: "<<odometryFrame<<endl;
+    // publish_odometry(cloud_msg->header.stamp, mapFrame, odometryFrame, pose, twist);
+
+     // Matching
+    std::pair<Eigen::Matrix4d, Eigen::Matrix4d> result = matching(cloud_msg->header.stamp, cloud);
+    Eigen::Matrix4d pose = result.first;
+    Eigen::Matrix4d radar_delta = result.second;
     geometry_msgs::TwistWithCovariance twist = twistMsg->twist;
+
+    Eigen::Affine3f incrementalOdometryAffineFront(pose.cast<float>()); // This is the transformation matrix of the current scan to scan transformation right after the last update
+
+    // cout<<"pose: "<<pose<<endl;
     // publish map to odom frame
-    cout<<"map frame: "<<mapFrame<<", odom frame: "<<odometryFrame<<endl;
-    publish_odometry(cloud_msg->header.stamp, mapFrame, odometryFrame, pose, twist);
+    nav_msgs::Odometry radarOdom_ros;
+    radarOdom_ros = publish_odometry(cloud_msg->header.stamp, odometryFrame, baselinkFrame, pose, twist);
 
-    // In offline estimation, point clouds will be supplied until the published time
-    std_msgs::HeaderPtr read_until(new std_msgs::Header());
-    read_until->frame_id = points_topic;
-    read_until->stamp = cloud_msg->header.stamp + ros::Duration(1, 0);
-    read_until_pub.publish(read_until);
+    // publish incremental radar odometry
+    publish_incremental_odom(cloud_msg->header.stamp, odometryFrame, baselinkFrame, pose, radar_delta, radarOdom_ros);
 
-    read_until->frame_id = "/filtered_points";
-    read_until_pub.publish(read_until);
+
+    // // In offline estimation, point clouds will be supplied until the published time
+    // std_msgs::HeaderPtr read_until(new std_msgs::Header());
+    // read_until->frame_id = points_topic;
+    // read_until->stamp = cloud_msg->header.stamp + ros::Duration(1, 0);
+    // read_until_pub.publish(read_until);
+
+    // read_until->frame_id = "/filtered_points";
+    // read_until_pub.publish(read_until);
   }
 
 
@@ -414,7 +438,7 @@ private:
    * @param cloud  the input cloud
    * @return the relative pose between the input cloud and the keyframe_ cloud
    */
-  Eigen::Matrix4d matching(const ros::Time& stamp, const pcl::PointCloud<PointT>::ConstPtr& cloud) {
+  std::pair<Eigen::Matrix4d, Eigen::Matrix4d> matching(const ros::Time& stamp, const pcl::PointCloud<PointT>::ConstPtr& cloud) {
     if(!keyframe_cloud_s2s) {
       prev_time = ros::Time();
       prev_trans_s2s.setIdentity();
@@ -428,7 +452,7 @@ private:
         keyframe_cloud_s2m = cloud;
         registration_s2m->setInputTarget(keyframe_cloud_s2m);
       }
-      return Eigen::Matrix4d::Identity();
+      return std::make_pair(Eigen::Matrix4d::Identity(), Eigen::Matrix4d::Identity());
     }
     // auto filtered = downsample(cloud);
     auto filtered = cloud;
@@ -464,8 +488,12 @@ private:
     if(!registration_s2s->hasConverged()) {
       NODELET_INFO_STREAM("scan matching_ has not converged!!");
       NODELET_INFO_STREAM("ignore this frame(" << stamp << ")");
-      if (enable_scan_to_map) return keyframe_pose_s2m * prev_trans_s2m;
-      else return keyframe_pose_s2s * prev_trans_s2s;
+      // if (enable_scan_to_map) return keyframe_pose_s2m * prev_trans_s2m;
+      // else return keyframe_pose_s2s * prev_trans_s2s;
+      Eigen::Matrix4d last_keyframe_pose_s2s = keyframe_pose_s2s * prev_trans_s2s;
+      Eigen::Matrix4d last_keyframe_pose_s2m = keyframe_pose_s2m * prev_trans_s2m;
+      if (enable_scan_to_map) return std::make_pair(last_keyframe_pose_s2m, last_radar_delta);
+      else return std::make_pair(last_keyframe_pose_s2s, last_radar_delta);
     }
     Eigen::Matrix4d trans_s2s = registration_s2s->getFinalTransformation().cast<double>();
     odom_s2s_now = keyframe_pose_s2s * trans_s2s;
@@ -476,7 +504,9 @@ private:
       if(!registration_s2m->hasConverged()) {
         NODELET_INFO_STREAM("scan matching_ has not converged!!");
         NODELET_INFO_STREAM("ignore this frame(" << stamp << ")");
-        return keyframe_pose_s2m * prev_trans_s2m;
+        // return keyframe_pose_s2m * prev_trans_s2m;
+        Eigen::Matrix4d last_keyframe_pose_s2m = keyframe_pose_s2m * prev_trans_s2m;
+        return std::make_pair(last_keyframe_pose_s2m, last_radar_delta);
       }
       trans_s2m = registration_s2m->getFinalTransformation().cast<double>();
       odom_s2m_now = keyframe_pose_s2m * trans_s2m;
@@ -487,7 +517,7 @@ private:
     bool thresholded = false;
     if(enable_transform_thresholding) {
       // ROS_INFO_STREAM("Transform thresholding");
-      Eigen::Matrix4d radar_delta;
+      // Eigen::Matrix4d radar_delta;
       if(enable_scan_to_map) radar_delta = prev_trans_s2m.inverse() * trans_s2m;
       else radar_delta = prev_trans_s2s.inverse() * trans_s2s;
       double dx_rd = radar_delta.block<3, 1>(0, 3).norm();
@@ -612,14 +642,14 @@ private:
     if (aligned_points_pub.getNumSubscribers() > 0)
     {
       pcl::transformPointCloud (*cloud, *aligned, odom_s2s_now);
-      aligned->header.frame_id = odometryFrame;
+      aligned->header.frame_id = baselinkFrame;
       aligned_points_pub.publish(*aligned);
     }
 
     if (enable_scan_to_map)
-      return odom_s2m_now;
+      return std::make_pair(odom_s2m_now, radar_delta);
     else
-      return odom_s2s_now;
+      return std::make_pair(odom_s2s_now, radar_delta);
   }
 
 
@@ -628,27 +658,93 @@ private:
    * @param stamp  timestamp
    * @param pose   odometry pose to be published
    */
-  void publish_odometry(const ros::Time& stamp, const std::string& father_frame_id, const std::string& child_frame_id, const Eigen::Matrix4d& pose_in, const geometry_msgs::TwistWithCovariance twist_in) {
+  // void publish_odometry(const ros::Time& stamp, const std::string& father_frame_id, const std::string& child_frame_id, const Eigen::Matrix4d& pose_in, const geometry_msgs::TwistWithCovariance twist_in) {
+  //   // publish transform stamped for IMU integration
+  //   geometry_msgs::TransformStamped odom_trans = matrix2transform(stamp, pose_in, father_frame_id, child_frame_id); //"map" 
+  //   trans_pub.publish(odom_trans);
+
+  //   // broadcast the transform over TF
+  //   map2odom_broadcaster.sendTransform(odom_trans);
+
+  //   // publish the transform
+  //   nav_msgs::Odometry odom;
+  //   odom.header.stamp = stamp;
+  //   odom.header.frame_id = father_frame_id;   // frame: /odom
+  //   odom.child_frame_id = child_frame_id;
+
+  //   odom.pose.pose.position.x = pose_in(0, 3);
+  //   odom.pose.pose.position.y = pose_in(1, 3);
+  //   odom.pose.pose.position.z = pose_in(2, 3);
+  //   odom.pose.pose.orientation = odom_trans.transform.rotation;
+  //   odom.twist = twist_in;
+
+  //   odom_pub.publish(odom);
+  // }
+  nav_msgs::Odometry publish_odometry(const ros::Time& stamp, const std::string& father_frame_id, const std::string& child_frame_id, const Eigen::Matrix4d& pose_in, const geometry_msgs::TwistWithCovariance twist_in) {
     // publish transform stamped for IMU integration
-    geometry_msgs::TransformStamped odom_trans = matrix2transform(stamp, pose_in, father_frame_id, child_frame_id); //"map" 
+    geometry_msgs::TransformStamped odom_trans = radar_graph_slam::matrix2transform(stamp, pose_in, odometryFrame, baselinkFrame); //"map" 
     trans_pub.publish(odom_trans);
 
-    // broadcast the transform over TF
-    map2odom_broadcaster.sendTransform(odom_trans);
+    // broadcast the transform over TF odom to radar_link
+    // map2odom_broadcaster.sendTransform(odom_trans);
 
     // publish the transform
-    nav_msgs::Odometry odom;
-    odom.header.stamp = stamp;
-    odom.header.frame_id = father_frame_id;   // frame: /odom
-    odom.child_frame_id = child_frame_id;
+    nav_msgs::Odometry radar_odom;
+    radar_odom.header.stamp = stamp;
+    radar_odom.header.frame_id = father_frame_id;   // frame: /odom
+    radar_odom.child_frame_id = child_frame_id;
 
-    odom.pose.pose.position.x = pose_in(0, 3);
-    odom.pose.pose.position.y = pose_in(1, 3);
-    odom.pose.pose.position.z = pose_in(2, 3);
-    odom.pose.pose.orientation = odom_trans.transform.rotation;
-    odom.twist = twist_in;
+    radar_odom.pose.pose.position.x = pose_in(0, 3);
+    radar_odom.pose.pose.position.y = pose_in(1, 3);
+    radar_odom.pose.pose.position.z = pose_in(2, 3);
+    radar_odom.pose.pose.orientation = odom_trans.transform.rotation;
+    radar_odom.twist = twist_in;
 
-    odom_pub.publish(odom);
+    odom_pub.publish(radar_odom);
+
+    // Need to compute radar odom incremental
+
+    // static bool lastIncreOdomPubFlag = false;
+    // // static nav_msgs::Odometry laserOdomIncremental;
+    static nav_msgs::Odometry radarOdomIncremental; 
+    static Eigen::Affine3f increOdomAffine;
+
+    return radar_odom;
+    
+  }
+  
+
+  void publish_incremental_odom(const ros::Time& stamp, const std::string& father_frame_id, const std::string& child_frame_id, const Eigen::Matrix4d& pose_in, const Eigen::Matrix4d& radar_delta, nav_msgs::Odometry radarOdom_ros) {
+    // publish transform stamped for IMU integration
+    Eigen::Affine3f delta_Affine(radar_delta.cast<float>());
+    Eigen::Affine3f currAffinePose(pose_in.cast<float>());
+    static nav_msgs::Odometry radarIncrementalOdom;
+    // static bool is_increInitialized = false;
+    // publish the transform
+    if (is_increInitialized == false) {
+      is_increInitialized = true;
+      radarIncrementalOdom = radarOdom_ros;
+      radarIncrementalAffine = currAffinePose;
+    }
+    else {
+      // Eigen::Affine3f affineIncre = prev_pose.inverse() * radarincrementalOdometry;
+      // prev_pose = radarincrementalOdometry;
+      radarIncrementalAffine = radarIncrementalAffine * delta_Affine;
+      float x, y, z, roll, pitch, yaw;
+      pcl::getTranslationAndEulerAngles(radarIncrementalAffine, x, y, z, roll, pitch, yaw);
+
+      radarIncrementalOdom.header.stamp = stamp;
+      radarIncrementalOdom.header.frame_id = father_frame_id;
+      radarIncrementalOdom.child_frame_id = child_frame_id;
+      radarIncrementalOdom.pose.pose.position.x = x;
+      radarIncrementalOdom.pose.pose.position.y = y;
+      radarIncrementalOdom.pose.pose.position.z = z;
+      radarIncrementalOdom.pose.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(roll, pitch, yaw);
+      // cout<<"incrementalOdometryAffineBack: "<<incrementalOdometryAffineBack.matrix()<<endl;
+    }
+
+    // publish the incremental radar odometry
+    odom_incremental_pub.publish(radarIncrementalOdom);
   }
 
   /**
@@ -730,6 +826,15 @@ private:
   std::unique_ptr<message_filters::Subscriber<geometry_msgs::TwistWithCovarianceStamped>> ego_vel_sub;
   std::unique_ptr<message_filters::Subscriber<sensor_msgs::PointCloud2>> points_sub;
   std::unique_ptr<message_filters::Synchronizer<ApproxSyncPolicy>> sync;
+
+  // Incremental odom
+  // static bool is_increInitialized;
+
+  static Eigen::Affine3f prev_pose;
+  bool is_increInitialized;
+  Eigen::Matrix4d radar_delta;
+  Eigen::Affine3f radarIncrementalAffine;
+  ros::Publisher odom_incremental_pub;
 
   // Submap
   ros::Publisher submap_pub;
