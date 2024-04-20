@@ -27,7 +27,7 @@
 
 #include "tictoc.h"
 
-#include <radar_graph_slam/keyframe.hpp>
+#include <rrio/keyframe.hpp>
 
 using namespace Eigen;
 using namespace nanoflann;
@@ -98,7 +98,7 @@ public:
 
     // User-side API
     void makeAndSaveScancontextAndKeys( pcl::PointCloud<SCPointType> & _scan_down );
-    std::pair<int, float> detectLoopClosureID( const std::vector<radar_graph_slam::KeyFrame::Ptr>& candidate_keyframes, const radar_graph_slam::KeyFrame::Ptr& new_keyframe ); // int: nearest node index, float: relative yaw  
+    std::pair<int, float> detectLoopClosureID( const std::vector<rrio::KeyFrame::Ptr>& candidate_keyframes, const rrio::KeyFrame::Ptr& new_keyframe ); // int: nearest node index, float: relative yaw  
 
     // for ltmapper 
     const Eigen::MatrixXd& getConstRefRecentSCD(void);

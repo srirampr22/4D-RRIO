@@ -7,7 +7,7 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
-namespace radar_graph_slam {
+namespace rrio {
 
 class InformationMatrixCalculator {
 public:
@@ -54,6 +54,6 @@ private:
   double fitness_score_thresh;
 };
 
-}  // namespace radar_graph_slam
+}  // namespace rrio
 
 #endif  // INFORMATION_MATRIX_CALCULATOR_HPP

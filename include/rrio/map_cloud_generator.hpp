@@ -6,9 +6,9 @@
 #include <vector>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
-#include <radar_graph_slam/keyframe.hpp>
+#include <rrio/keyframe.hpp>
 
-namespace radar_graph_slam {
+namespace rrio {
 
 /**
  * @brief this class generates a map point cloud from registered keyframes
@@ -29,6 +29,6 @@ public:
   pcl::PointCloud<PointT>::Ptr generate(const std::vector<KeyFrameSnapshot::Ptr>& keyframes, double resolution) const;
 };
 
-}  // namespace radar_graph_slam
+}  // namespace rrio
 
 #endif  // MAP_POINTCLOUD_GENERATOR_HPP

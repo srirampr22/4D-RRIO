@@ -11,7 +11,7 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <tf_conversions/tf_eigen.h>
 
-namespace radar_graph_slam {
+namespace rrio {
 
 extern const int imuQueLength = 200;
 extern const float scanPeriod = 0.083333;
@@ -172,6 +172,6 @@ static Eigen::Isometry3d odom2isometry(const nav_msgs::OdometryConstPtr& odom_ms
   return isometry;
 }
 
-}  // namespace radar_graph_slam
+}  // namespace rrio
 
 #endif  // ROS_UTILS_HPP

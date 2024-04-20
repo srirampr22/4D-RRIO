@@ -8,7 +8,7 @@
 
 #include <sensor_msgs/PointCloud2.h>
 
-namespace radar_graph_slam {
+namespace rrio {
 
 /**
  * @brief this class decides if a new frame should be registered to the pose graph as a keyframe
@@ -82,6 +82,6 @@ private:
   double prev_keytime;
 };
 
-}  // namespace radar_graph_slam
+}  // namespace rrio
 
 #endif  // KEYFRAME_UPDATOR_HPP

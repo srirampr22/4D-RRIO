@@ -7,7 +7,7 @@
 
 #include <pcl/registration/registration.h>
 
-namespace radar_graph_slam {
+namespace rrio {
 
 /**
  * @brief select a scan matching algorithm according to rosparams
@@ -16,6 +16,6 @@ namespace radar_graph_slam {
  */
 pcl::Registration<pcl::PointXYZI, pcl::PointXYZI>::Ptr select_registration_method(ros::NodeHandle& pnh);
 
-}  // namespace radar_graph_slam
+}  // namespace rrio
 
 #endif  //

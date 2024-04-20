@@ -19,7 +19,7 @@ class HyperGraph;
 class SparseOptimizer;
 }  // namespace g2o
 
-namespace radar_graph_slam {
+namespace rrio {
 
 /**
  * @brief KeyFrame (pose node)
@@ -81,6 +81,6 @@ public:
   pcl::PointCloud<PointT>::ConstPtr cloud;  // point cloud
 };
 
-}  // namespace radar_graph_slam
+}  // namespace rrio
 
 #endif  // KEYFRAME_HPP

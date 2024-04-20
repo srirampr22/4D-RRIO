@@ -33,7 +33,7 @@ class EdgePlanePriorDistance;
 class RobustKernelFactory;
 }  // namespace g2o
 
-namespace radar_graph_slam {
+namespace rrio {
 
 class GraphSLAM {
 public:
@@ -155,6 +155,6 @@ public:
   std::unique_ptr<g2o::HyperGraph> graph;  // g2o graph
 };
 
-}  // namespace radar_graph_slam
+}  // namespace rrio
 
 #endif  // GRAPH_SLAM_HPP

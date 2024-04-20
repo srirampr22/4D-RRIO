@@ -7,10 +7,10 @@
 
 #include <boost/format.hpp>
 
-#include <radar_graph_slam/keyframe.hpp>
-#include <radar_graph_slam/registrations.hpp>
-#include <radar_graph_slam/graph_slam.hpp>
-#include <radar_graph_slam/information_matrix_calculator.hpp>
+#include <rrio/keyframe.hpp>
+#include <rrio/registrations.hpp>
+#include <rrio/graph_slam.hpp>
+#include <rrio/information_matrix_calculator.hpp>
 #include <scan_context/Scancontext.h>
 
 #include <g2o/types/slam3d/vertex_se3.h>
@@ -21,7 +21,7 @@
 
 using namespace std;
 
-namespace radar_graph_slam {
+namespace rrio {
 
 struct Loop {
 public:
@@ -51,7 +51,7 @@ public:
   LoopDetector(ros::NodeHandle& pnh);
   ~LoopDetector();
 
-  std::vector<Loop::Ptr> detect(const std::vector<KeyFrame::Ptr>& keyframes, const std::deque<KeyFrame::Ptr>& new_keyframes, radar_graph_slam::GraphSLAM& graph_slam);
+  std::vector<Loop::Ptr> detect(const std::vector<KeyFrame::Ptr>& keyframes, const std::deque<KeyFrame::Ptr>& new_keyframes, rrio::GraphSLAM& graph_slam);
 
   double get_distance_thresh() const;
 
@@ -118,6 +118,6 @@ public:
   image_transport::Publisher pub_pre_sc;
 };
 
-}  // namespace radar_graph_slam
+}  // namespace rrio
 
 #endif  // LOOP_DETECTOR_HPP
