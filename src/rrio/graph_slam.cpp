@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-#include <radar_graph_slam/graph_slam.hpp>
+#include <rrio/graph_slam.hpp>
 
 #include <boost/format.hpp>
 #include <g2o/stuff/macros.h>
@@ -50,7 +50,7 @@ G2O_REGISTER_TYPE(EDGE_PLANE_PAERPENDICULAR, EdgePlanePerpendicular)
 G2O_REGISTER_TYPE(EDGE_SE3_GTUTM, EdgeSE3GtUTM)
 }  // namespace g2o
 
-namespace radar_graph_slam {
+namespace rrio {
 
 /**
  * @brief constructor
@@ -409,4 +409,4 @@ bool GraphSLAM::load(const std::string& filename) {
   return true;
 }
 
-}  // namespace radar_graph_slam
+}  // namespace rrio

@@ -2,7 +2,7 @@
 
 // namespace SC2
 // {
-using namespace radar_graph_slam;
+using namespace rrio;
 
 void coreImportTest (void)
 {

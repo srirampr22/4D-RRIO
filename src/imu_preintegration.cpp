@@ -81,6 +81,25 @@ public:
         radarOdomTime = odomMsg->header.stamp.toSec();
     }
 
+    void saveRadarIMUOdometry(const nav_msgs::Odometry& radarOdometry)
+    {
+        static std::ofstream fout("/home/sriram/4D_RIS_ws/src/results/4D_RIO_results_nyu_everything.txt", std::ios::out);
+        // fout << "# timestamp tx ty tz qx qy qz qw" << std::endl;
+        fout.setf(std::ios::fixed, std::ios::floatfield);
+        fout.precision(8);
+
+        double timestamp = radarOdometry.header.stamp.toSec();
+        double tx = radarOdometry.pose.pose.position.x;
+        double ty = radarOdometry.pose.pose.position.y;
+        double tz = radarOdometry.pose.pose.position.z;
+        double qx = radarOdometry.pose.pose.orientation.x;
+        double qy = radarOdometry.pose.pose.orientation.y;
+        double qz = radarOdometry.pose.pose.orientation.z;
+        double qw = radarOdometry.pose.pose.orientation.w;
+
+        fout << timestamp << " " << tx << " " << ty << " " << tz << " " << qx << " " << qy << " " << qz << " " << qw << std::endl;
+    }
+
     void imuOdometryHandler(const nav_msgs::Odometry::ConstPtr& odomMsg)
     {
         if (odomMsg == nullptr) {
@@ -150,8 +169,11 @@ public:
 
         }
 
+        // save the final estimated odometry (radarOdometry) to a file:
+        // saveRadarIMUOdometry(radarOdometry);
 
     }
+
 
 };
 

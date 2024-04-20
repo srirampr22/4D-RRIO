@@ -46,13 +46,13 @@
 
 #include <Eigen/Dense>
 
-#include <radar_graph_slam/ros_utils.hpp>
-#include <radar_graph_slam/registrations.hpp>
-#include <radar_graph_slam/ScanMatchingStatus.h>
-#include <radar_graph_slam/keyframe.hpp>
-#include <radar_graph_slam/keyframe_updater.hpp>
-#include <radar_graph_slam/graph_slam.hpp>
-#include <radar_graph_slam/information_matrix_calculator.hpp>
+#include <rrio/ros_utils.hpp>
+#include <rrio/registrations.hpp>
+#include <rrio/ScanMatchingStatus.h>
+#include <rrio/keyframe.hpp>
+#include <rrio/keyframe_updater.hpp>
+#include <rrio/graph_slam.hpp>
+#include <rrio/information_matrix_calculator.hpp>
 
 #include "utility_radar.h"
 
@@ -129,7 +129,7 @@ private:
     keyframe_delta_time = pnh.param<double>("keyframe_delta_time", 1.0);
 
     map_cloud_resolution = pnh.param<double>("map_cloud_resolution", 0.05);
-    keyframe_updater.reset(new radar_graph_slam::KeyframeUpdater(pnh));
+    keyframe_updater.reset(new rrio::KeyframeUpdater(pnh));
 
     enable_scan_to_map = pnh.param<bool>("enable_scan_to_map", false);
     max_submap_frames = pnh.param<int>("max_submap_frames", 10); // 5
@@ -163,8 +163,8 @@ private:
       pcl::PassThrough<PointT>::Ptr passthrough(new pcl::PassThrough<PointT>());
       downsample_filter = passthrough;
     }
-    registration_s2s = radar_graph_slam::select_registration_method(pnh);
-    registration_s2m = radar_graph_slam::select_registration_method(pnh);
+    registration_s2s = rrio::select_registration_method(pnh);
+    registration_s2m = rrio::select_registration_method(pnh);
   }
 
   void pointcloud_callback(const geometry_msgs::TwistWithCovarianceStampedConstPtr& twistMsg, const sensor_msgs::PointCloud2ConstPtr& cloud_msg) {
@@ -259,7 +259,7 @@ private:
 
   nav_msgs::Odometry publish_odometry(const ros::Time& stamp, const std::string& father_frame_id, const std::string& child_frame_id, const Eigen::Matrix4d& pose_in, const geometry_msgs::TwistWithCovariance twist_in) {
     // publish transform stamped for IMU integration
-    geometry_msgs::TransformStamped odom_trans = radar_graph_slam::matrix2transform(stamp, pose_in, mapFrame, odometryFrame); //"map" 
+    geometry_msgs::TransformStamped odom_trans = rrio::matrix2transform(stamp, pose_in, mapFrame, odometryFrame); //"map" 
     trans_pub.publish(odom_trans);
 
     // broadcast the transform over TF odom to radar_link
@@ -436,7 +436,7 @@ private:
       // Loose Coupling the IMU roll & pitch
       // if (enable_imu_fusion){
       //   if(enable_scan_to_map) transformUpdate(odom_s2m_now);
-      //   else radar_graph_slam::transformUpdate(odom_s2s_now);
+      //   else rrio::transformUpdate(odom_s2s_now);
       // }
 
       keyframe_cloud_s2s = filtered;
@@ -448,7 +448,7 @@ private:
       prev_trans_s2s.setIdentity();
 
       double accum_d = keyframe_updater->get_accum_distance();
-      radar_graph_slam::KeyFrame::Ptr keyframe(new radar_graph_slam::KeyFrame(keyframe_index, stamp, Eigen::Isometry3d(odom_s2s_now.cast<double>()), accum_d, cloud));
+      rrio::KeyFrame::Ptr keyframe(new rrio::KeyFrame(keyframe_index, stamp, Eigen::Isometry3d(odom_s2s_now.cast<double>()), accum_d, cloud));
       keyframe_index ++;
       keyframes.push_back(keyframe);
 
@@ -547,9 +547,9 @@ private:
   double timeLaserOdometry = 0;
   int imuPointerFront;
   int imuPointerLast;
-  double imuTime[radar_graph_slam::imuQueLength];
-  float imuRoll[radar_graph_slam::imuQueLength];
-  float imuPitch[radar_graph_slam::imuQueLength];
+  double imuTime[rrio::imuQueLength];
+  float imuRoll[rrio::imuQueLength];
+  float imuPitch[rrio::imuQueLength];
   double imu_fusion_ratio;
 
   std::unique_ptr<message_filters::Subscriber<geometry_msgs::TwistWithCovarianceStamped>> ego_vel_sub;
@@ -569,8 +569,8 @@ private:
 
   // Submap
   ros::Publisher submap_pub;
-  std::unique_ptr<radar_graph_slam::KeyframeUpdater> keyframe_updater;
-  std::vector<radar_graph_slam::KeyFrame::Ptr> keyframes;
+  std::unique_ptr<rrio::KeyframeUpdater> keyframe_updater;
+  std::vector<rrio::KeyFrame::Ptr> keyframes;
   size_t keyframe_index = 0;
   double map_cloud_resolution;
   int  max_submap_frames;
@@ -648,7 +648,7 @@ int main(int argc, char** argv) {
     signal(SIGINT, signalHandler);
 
     ScanMatchingOdometryNode node(nh, private_nh);
-    // radar_graph_slam::ScanMatchingOdometryNode node(nh, private_nh);
+    // rrio::ScanMatchingOdometryNode node(nh, private_nh);
 
     // Run the node's main operations with ROS spinning
     ros::spin();

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: BSD-2-Clause
 cmake_minimum_required(VERSION 2.8.3)
-project(radar_graph_slam)
+project(rrio)
 
 # Can we use C++17 in indigo?
 add_definitions(-msse -msse2 -msse3 -msse4 -msse4.1 -msse4.2)
@@ -84,7 +84,7 @@ generate_messages(DEPENDENCIES std_msgs geometry_msgs)
 ###################################
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES radar_graph_slam_nodelet
+  LIBRARIES rrio_nodelet
 #  CATKIN_DEPENDS pcl_ros roscpp sensor_msgs
   DEPENDS system_lib GTSAM OpenCV
 )
@@ -105,7 +105,22 @@ add_library(preprocessing_nodelet
   apps/radar_preprocessing.cpp
   src/radar_ego_velocity_estimator.cpp
   #src/lib/radar_body_velocity_estimator.cpp
-  #src/lib/radar_body_velocity_estimator_ros.cpp
+  #src/lib/radar_body_velocity_estimator_ros.cpp4
+  src/robust_dynamic_filter.cpp
+  # HDBSCAN
+  src/hdbscan/hdbscan.cpp
+  src/hdbscan/bitSet.cpp
+  src/hdbscan/cluster.cpp
+  src/hdbscan/EuclideanDistance.cpp
+  src/hdbscan/hdbscanAlgorithm.cpp
+  src/hdbscan/hdbscanConstraint.cpp
+  src/hdbscan/hdbscanParameters.cpp
+  src/hdbscan/hdbscanResult.cpp
+  src/hdbscan/hdbscanRunner.cpp
+  src/hdbscan/IDistanceCalculator.cpp
+  src/hdbscan/ManhattanDistance.cpp
+  src/hdbscan/outlierScore.cpp
+  src/hdbscan/undirectedGraph.cpp
 )
 target_link_libraries(preprocessing_nodelet
   ${catkin_LIBRARIES}
@@ -118,7 +133,7 @@ add_dependencies(preprocessing_nodelet ${PROJECT_NAME}_gencpp)
 
 add_library(scan_matching_odometry_nodelet
   apps/scan_matching_odometry_nodelet.cpp
-  src/radar_graph_slam/registrations.cpp
+  src/rrio/registrations.cpp
 )
 target_link_libraries(scan_matching_odometry_nodelet
   ${catkin_LIBRARIES}
@@ -129,18 +144,18 @@ target_link_libraries(scan_matching_odometry_nodelet
 add_dependencies(scan_matching_odometry_nodelet ${PROJECT_NAME}_gencpp)
 
 
-add_library(radar_graph_slam_nodelet
-  apps/radar_graph_slam_nodelet.cpp
-  src/radar_graph_slam/graph_slam.cpp
-  src/radar_graph_slam/loop_detector.cpp
-  src/radar_graph_slam/Scancontext.cpp
-  src/radar_graph_slam/keyframe.cpp
-  src/radar_graph_slam/map_cloud_generator.cpp
-  src/radar_graph_slam/registrations.cpp
-  src/radar_graph_slam/information_matrix_calculator.cpp
+add_library(rrio_nodelet
+  apps/rrio_nodelet.cpp
+  src/rrio/graph_slam.cpp
+  src/rrio/loop_detector.cpp
+  src/rrio/Scancontext.cpp
+  src/rrio/keyframe.cpp
+  src/rrio/map_cloud_generator.cpp
+  src/rrio/registrations.cpp
+  src/rrio/information_matrix_calculator.cpp
   src/g2o/robust_kernel_io.cpp
 )
-target_link_libraries(radar_graph_slam_nodelet
+target_link_libraries(rrio_nodelet
   ${catkin_LIBRARIES}
   ${OpenCV_LIBS}
   ${PCL_LIBRARIES}
@@ -155,12 +170,12 @@ target_link_libraries(radar_graph_slam_nodelet
   ${OpenCV_LIBRARIES}
   ${Boost_LIBRARIES}
 )
-add_dependencies(radar_graph_slam_nodelet ${PROJECT_NAME}_gencpp)
+add_dependencies(rrio_nodelet ${PROJECT_NAME}_gencpp)
 
 add_executable(imu_preintegration_node src/imu_preintegration.cpp )
 target_link_libraries(imu_preintegration_node ${Boost_LIBRARIES} ${catkin_LIBRARIES} ${PCL_LIBRARIES} gtsam)
 
-add_executable(scan_matching_odometry_node src/scan_matching_odometry_node.cpp src/radar_graph_slam/registrations.cpp src/radar_graph_slam/keyframe.cpp src/g2o/robust_kernel_io.cpp)
+add_executable(scan_matching_odometry_node src/scan_matching_odometry_node.cpp src/rrio/registrations.cpp src/rrio/keyframe.cpp src/g2o/robust_kernel_io.cpp)
 target_link_libraries(scan_matching_odometry_node ${Boost_LIBRARIES} ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES}
   ${G2O_TYPES_DATA}
   ${G2O_CORE_LIBRARY}
@@ -177,7 +192,7 @@ target_link_libraries(scan_matching_odometry_node ${Boost_LIBRARIES} ${catkin_LI
 # Adjust Groundtruth
 add_executable(gt_adjust src/gt_adjust.cpp )
 target_link_libraries(gt_adjust
-  radar_graph_slam_nodelet
+  rrio_nodelet
   ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}
   ${G2O_TYPES_DATA}
@@ -192,7 +207,7 @@ target_link_libraries(gt_adjust
 # Calculate UTM->world Transform
 add_executable(gps_traj_align src/gps_traj_align.cpp )
 target_link_libraries(gps_traj_align
-  radar_graph_slam_nodelet
+  rrio_nodelet
   ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}
   ${G2O_TYPES_DATA}
@@ -221,5 +236,5 @@ install(FILES nodelet_plugins.xml
 install(TARGETS
   preprocessing_nodelet
   scan_matching_odometry_nodelet 
-  radar_graph_slam_nodelet
+  rrio_nodelet
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})

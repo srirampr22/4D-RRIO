@@ -1,4 +1,4 @@
-#include <radar_graph_slam/loop_detector.hpp>
+#include <rrio/loop_detector.hpp>
 
 using namespace std;
 
@@ -45,7 +45,7 @@ Eigen::Vector3d monoToRainbow(int value){
     return Eigen::Vector3d(blue, green, red);
 }
 
-namespace radar_graph_slam {
+namespace rrio {
 
 LoopDetector::LoopDetector(ros::NodeHandle& pnh) {
     enable_pf = pnh.param<bool>("enable_pf", true);
@@ -97,7 +97,7 @@ LoopDetector::~LoopDetector() {}
  * @param new_keyframes   newly registered keyframes
  * @param graph_slam      pose graph
  */
-std::vector<Loop::Ptr> LoopDetector::detect(const std::vector<KeyFrame::Ptr>& keyframes, const std::deque<KeyFrame::Ptr>& new_keyframes, radar_graph_slam::GraphSLAM& graph_slam) {
+std::vector<Loop::Ptr> LoopDetector::detect(const std::vector<KeyFrame::Ptr>& keyframes, const std::deque<KeyFrame::Ptr>& new_keyframes, rrio::GraphSLAM& graph_slam) {
     std::vector<Loop::Ptr> detected_loops;
     for(const auto& new_keyframe : new_keyframes) {
         std::vector<KeyFrame::Ptr> candidates;
@@ -441,4 +441,4 @@ Loop::Ptr LoopDetector::matching(const std::vector<KeyFrame::Ptr>& candidate_key
 #endif
 
 
-}  // namespace radar_graph_slam
+}  // namespace rrio

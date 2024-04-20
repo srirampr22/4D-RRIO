@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-#include <radar_graph_slam/keyframe.hpp>
+#include <rrio/keyframe.hpp>
 
 #include <boost/filesystem.hpp>
 
@@ -8,7 +8,7 @@
 #include <g2o/core/sparse_optimizer.h>
 #include <g2o/types/slam3d/vertex_se3.h>
 
-namespace radar_graph_slam {
+namespace rrio {
 
 KeyFrame::KeyFrame(const size_t index, const ros::Time& stamp, const Eigen::Isometry3d& odom_scan2scan, double accum_distance, const pcl::PointCloud<PointT>::ConstPtr& cloud) : 
   index(index), stamp(stamp), odom_scan2scan(odom_scan2scan), accum_distance(accum_distance), cloud(cloud), node(nullptr) {}
@@ -159,4 +159,4 @@ KeyFrameSnapshot::KeyFrameSnapshot(const KeyFrame::Ptr& key) : pose(key->node->e
 
 KeyFrameSnapshot::~KeyFrameSnapshot() {}
 
-}  // namespace radar_graph_slam
+}  // namespace rrio

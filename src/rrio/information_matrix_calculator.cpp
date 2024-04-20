@@ -2,14 +2,14 @@
 
 #include <iostream>
 
-#include <radar_graph_slam/information_matrix_calculator.hpp>
+#include <rrio/information_matrix_calculator.hpp>
 
 #include <pcl/search/kdtree.h>
 #include <pcl/common/transforms.h>
 
 using namespace std;
 
-namespace radar_graph_slam {
+namespace rrio {
 
 InformationMatrixCalculator::InformationMatrixCalculator(ros::NodeHandle& nh) {
   use_const_inf_matrix = nh.param<bool>("use_const_inf_matrix", false);
@@ -85,4 +85,4 @@ double InformationMatrixCalculator::calc_fitness_score(const pcl::PointCloud<Poi
     return (std::numeric_limits<double>::max());
 }
 
-}  // namespace radar_graph_slam
+}  // namespace rrio

@@ -1,11 +1,11 @@
 <library path="lib/libpreprocessing_nodelet">
-  <class name="radar_graph_slam/PreprocessingNodelet" type="radar_graph_slam::PreprocessingNodelet" base_class_type="nodelet::Nodelet" />
+  <class name="rrio/PreprocessingNodelet" type="rrio::PreprocessingNodelet" base_class_type="nodelet::Nodelet" />
 </library>
 
 <library path="lib/libscan_matching_odometry_nodelet">
-  <class name="radar_graph_slam/ScanMatchingOdometryNodelet" type="radar_graph_slam::ScanMatchingOdometryNodelet" base_class_type="nodelet::Nodelet" />
+  <class name="rrio/ScanMatchingOdometryNodelet" type="rrio::ScanMatchingOdometryNodelet" base_class_type="nodelet::Nodelet" />
 </library>
 
-<library path="lib/libradar_graph_slam_nodelet">
-  <class name="radar_graph_slam/RadarGraphSlamNodelet" type="radar_graph_slam::RadarGraphSlamNodelet" base_class_type="nodelet::Nodelet" />
+<library path="lib/librrio_nodelet">
+  <class name="rrio/RadarGraphSlamNodelet" type="rrio::RadarGraphSlamNodelet" base_class_type="nodelet::Nodelet" />
 </library>

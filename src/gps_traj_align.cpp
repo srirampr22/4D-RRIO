@@ -20,10 +20,10 @@
 #include <g2o/types/slam3d/edge_se3.h>
 #include <g2o/types/slam3d/vertex_se3.h>
 
-#include <radar_graph_slam/graph_slam.hpp>
+#include <rrio/graph_slam.hpp>
 
 using namespace std;
-using namespace radar_graph_slam;
+using namespace rrio;
 
 std::vector<std::pair<int,int>> associate(std::vector<double> first_stamps, std::vector<double> second_stamps, double offset, double max_difference)
 {

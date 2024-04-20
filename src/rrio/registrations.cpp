@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-#include <radar_graph_slam/registrations.hpp>
+#include <rrio/registrations.hpp>
 
 #include <iostream>
 
@@ -18,7 +18,7 @@
 #include <fast_gicp/gicp/fast_vgicp_cuda.hpp>
 #endif
 
-namespace radar_graph_slam {
+namespace rrio {
 
 pcl::Registration<pcl::PointXYZI, pcl::PointXYZI>::Ptr select_registration_method(ros::NodeHandle& pnh) {
   using PointT = pcl::PointXYZI;
@@ -137,4 +137,4 @@ pcl::Registration<pcl::PointXYZI, pcl::PointXYZI>::Ptr select_registration_metho
   return nullptr;
 }
 
-}  // namespace radar_graph_slam
+}  // namespace rrio

@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>radar_graph_slam</name>
+  <name>rrio</name>
   <version>0.0.0</version>
   <description>4D radar interial odometry package</description>
 

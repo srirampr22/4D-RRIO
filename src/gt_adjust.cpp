@@ -13,10 +13,10 @@
 #include <g2o/types/slam3d/vertex_se3.h>
 #include <g2o/edge_se3_priorxyz.hpp>
 
-#include <radar_graph_slam/graph_slam.hpp>
+#include <rrio/graph_slam.hpp>
 
 using namespace std;
-using namespace radar_graph_slam;
+using namespace rrio;
 
 // Loop 3 matches: 0-5364 947-6168
 // Loop 2 matches: 0-8240 583-8658 1350-9373 1573-9582
