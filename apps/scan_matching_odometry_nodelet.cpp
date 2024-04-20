@@ -46,19 +46,20 @@
 
 #include <Eigen/Dense>
 
-#include <radar_graph_slam/ros_utils.hpp>
-#include <radar_graph_slam/registrations.hpp>
-#include <radar_graph_slam/ScanMatchingStatus.h>
-#include <radar_graph_slam/keyframe.hpp>
-#include <radar_graph_slam/keyframe_updater.hpp>
-#include <radar_graph_slam/graph_slam.hpp>
-#include <radar_graph_slam/information_matrix_calculator.hpp>
+#include <rrio/ros_utils.hpp>
+#include <rrio/registrations.hpp>
+#include <rrio/ScanMatchingStatus.h>
+#include <rrio/keyframe.hpp>
+#include <rrio/keyframe_updater.hpp>
+#include <rrio/graph_slam.hpp>
+#include <rrio/information_matrix_calculator.hpp>
 
 #include "utility_radar.h"
 
+
 using namespace std;
 
-namespace radar_graph_slam {
+namespace rrio {
 
 class ScanMatchingOdometryNodelet : public nodelet::Nodelet, public ParamServer {
 public:
@@ -101,6 +102,8 @@ public:
     aligned_points_pub = nh.advertise<sensor_msgs::PointCloud2>("/aligned_points", 32);
     submap_pub = nh.advertise<sensor_msgs::PointCloud2>("/radar_graph_slam/submap", 2);
 
+    
+
   }
 
 private:
@@ -111,6 +114,8 @@ private:
     auto& pnh = private_nh;
     points_topic = pnh.param<std::string>("points_topic", "/radar_enhanced_pcl");
     use_ego_vel = pnh.param<bool>("use_ego_vel", false);
+
+    
 
     // The minimum tranlational distance and rotation angle between keyframes_.
     // If this value is zero, frames are always compared with the previous frame
@@ -682,7 +687,7 @@ private:
   // }
   nav_msgs::Odometry publish_odometry(const ros::Time& stamp, const std::string& father_frame_id, const std::string& child_frame_id, const Eigen::Matrix4d& pose_in, const geometry_msgs::TwistWithCovariance twist_in) {
     // publish transform stamped for IMU integration
-    geometry_msgs::TransformStamped odom_trans = radar_graph_slam::matrix2transform(stamp, pose_in, odometryFrame, baselinkFrame); //"map" 
+    geometry_msgs::TransformStamped odom_trans = rrio::matrix2transform(stamp, pose_in, odometryFrame, baselinkFrame); //"map" 
     trans_pub.publish(odom_trans);
 
     // broadcast the transform over TF odom to radar_link
@@ -812,6 +817,7 @@ private:
   std::deque<sensor_msgs::ImuConstPtr> imu_queue;
   sensor_msgs::Imu last_frame_imu;
 
+
   bool enable_imu_fusion;
   bool imu_debug_out;
   Eigen::Matrix3d global_orient_matrix;  // The rotation matrix with initial IMU roll & pitch measurement (yaw = 0)
@@ -901,6 +907,6 @@ private:
   ros::Subscriber command_sub;
 };
 
-}  // namespace radar_graph_slam
+}  // namespace rrio
 
-PLUGINLIB_EXPORT_CLASS(radar_graph_slam::ScanMatchingOdometryNodelet, nodelet::Nodelet)
+PLUGINLIB_EXPORT_CLASS(rrio::ScanMatchingOdometryNodelet, nodelet::Nodelet)

@@ -37,9 +37,11 @@
 #include "rio_utils/radar_point_cloud.h"
 #include "utility_radar.h"
 
+#include "robust_dynamic_filter.h"
+
 using namespace std;
 
-namespace radar_graph_slam {
+namespace rrio {
 
 class PreprocessingNodelet : public nodelet::Nodelet, public ParamServer {
 public: 
@@ -73,7 +75,11 @@ public:
     pub_outlier_pc2 = nh.advertise<sensor_msgs::PointCloud2>(topic_outlier_pc2, 5);
     pc2_raw_pub = nh.advertise<sensor_msgs::PointCloud2>("/eagle_data/pc2_raw",1);
     enable_dynamic_object_removal = private_nh.param<bool>("enable_dynamic_object_removal", false);
+    enable_clustering = private_nh.param<bool>("enable_clustering", false);
     power_threshold = private_nh.param<float>("power_threshold", 0); // Notsure what this is
+
+    // Dynamic point filter stuff
+    dynamic_filter.setLength(2);
   }
 
 private:
@@ -343,10 +349,26 @@ private:
     pcl::fromROSMsg (inlier_radar_msg, *radarcloud_inlier);
 
     pcl::PointCloud<PointT>::ConstPtr src_cloud;
-    if (enable_dynamic_object_removal)
+    if (enable_dynamic_object_removal) {
+      // ROS_INFO("Dynamic object removal without Clustering enabled");
+      // dynamic_filter.append(radarcloud_inlier);
       src_cloud = radarcloud_inlier;
-    else
+    }
+    else if (enable_clustering) {
+      // ROS_INFO("Dynamic object removal with Clustering enabled");
+      dynamic_filter.append(radarcloud_inlier);
+      src_cloud = dynamic_filter.getFiltered();
+    }
+    else {
+      // ROS_INFO("Dynamic object removal disabled");
       src_cloud = radarcloud_xyzi;
+    }
+
+
+    // // Dynamic pcl filtering stuff 
+    // dynamic_filter.append(radarcloud_inlier);
+
+    // src_cloud = dynamic_filter.getFiltered();
 
     
     if(src_cloud->empty()) {
@@ -582,6 +604,9 @@ private:
   ros::NodeHandle nh;
   ros::NodeHandle private_nh;
 
+  // Dynamic pcl filtering stuff 
+  rdf::RobustDynamicFilter dynamic_filter;
+
   ros::Subscriber imu_sub;
   std::vector<sensor_msgs::ImuConstPtr> imu_queue;
   ros::Subscriber points_sub;
@@ -611,6 +636,7 @@ private:
 
   float power_threshold;
   bool enable_dynamic_object_removal = false;
+  bool enable_clustering = false;
 
   std::mutex odom_queue_mutex;
   std::deque<nav_msgs::Odometry> odom_msgs;
@@ -622,6 +648,6 @@ private:
   std::vector<Eigen::VectorXi> num_at_dist_vec;
 };
 
-}  // namespace radar_graph_slam
+}  // namespace rrio
 
-PLUGINLIB_EXPORT_CLASS(radar_graph_slam::PreprocessingNodelet, nodelet::Nodelet)
+PLUGINLIB_EXPORT_CLASS(rrio::PreprocessingNodelet, nodelet::Nodelet)

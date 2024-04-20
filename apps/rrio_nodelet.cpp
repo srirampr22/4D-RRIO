@@ -42,20 +42,20 @@
 #include <nodelet/nodelet.h>
 #include <pluginlib/class_list_macros.h>
 
-#include <radar_graph_slam/SaveMap.h>
-#include <radar_graph_slam/DumpGraph.h>
-#include <radar_graph_slam/ros_utils.hpp>
-#include <radar_graph_slam/ros_time_hash.hpp>
-#include <radar_graph_slam/FloorCoeffs.h>
-#include <radar_graph_slam/graph_slam.hpp>
-#include <radar_graph_slam/keyframe.hpp>
-#include <radar_graph_slam/keyframe_updater.hpp>
-#include <radar_graph_slam/loop_detector.hpp>
-#include <radar_graph_slam/information_matrix_calculator.hpp>
-#include <radar_graph_slam/map_cloud_generator.hpp>
-#include <radar_graph_slam/nmea_sentence_parser.hpp>
-#include "radar_graph_slam/polynomial_interpolation.hpp"
-#include <radar_graph_slam/registrations.hpp>
+#include <rrio/SaveMap.h>
+#include <rrio/DumpGraph.h>
+#include <rrio/ros_utils.hpp>
+#include <rrio/ros_time_hash.hpp>
+#include <rrio/FloorCoeffs.h>
+#include <rrio/graph_slam.hpp>
+#include <rrio/keyframe.hpp>
+#include <rrio/keyframe_updater.hpp>
+#include <rrio/loop_detector.hpp>
+#include <rrio/information_matrix_calculator.hpp>
+#include <rrio/map_cloud_generator.hpp>
+#include <rrio/nmea_sentence_parser.hpp>
+#include "rrio/polynomial_interpolation.hpp"
+#include <rrio/registrations.hpp>
 
 #include "scan_context/Scancontext.h"
 
@@ -74,7 +74,7 @@
 
 using namespace std;
 
-namespace radar_graph_slam {
+namespace rrio {
 
 class RadarGraphSlamNodelet : public nodelet::Nodelet, public ParamServer {
 public:
@@ -143,6 +143,8 @@ public:
 
     if (enable_preintegration)
       imu_odom_sub = nh.subscribe("/imu_pre_integ/imu_odom_incre", 1024, &RadarGraphSlamNodelet::imu_odom_callback, this); // need to subscribe to our /odom_incremental
+
+    command_sub = nh.subscribe("/command", 10, &RadarGraphSlamNodelet::command_callback, this);
 
     //***** publishers ******
     markers_pub = mt_nh.advertise<visualization_msgs::MarkerArray>("/radar_graph_slam/markers", 16);
@@ -980,7 +982,7 @@ private:
    * @param res
    * @return
    */
-  bool dump_service(radar_graph_slam::DumpGraphRequest& req, radar_graph_slam::DumpGraphResponse& res) {
+  bool dump_service(rrio::DumpGraphRequest& req, rrio::DumpGraphResponse& res) {
     std::lock_guard<std::mutex> lock(main_thread_mutex);
 
     std::string directory = req.destination;
@@ -1028,7 +1030,7 @@ private:
    * @param res
    * @return
    */
-  bool save_map_service(radar_graph_slam::SaveMapRequest& req, radar_graph_slam::SaveMapResponse& res) {
+  bool save_map_service(rrio::SaveMapRequest& req, rrio::SaveMapResponse& res) {
     std::vector<KeyFrameSnapshot::Ptr> snapshot;
 
     keyframes_snapshot_mutex.lock();
@@ -1182,8 +1184,9 @@ private:
   
   void command_callback(const std_msgs::String& str_msg) {
     if (str_msg.data == "output_aftmapped") {
+      // cout << "Outputting optimized edges..." << endl; 
       ofstream fout;
-      fout.open("/home/zhuge/stamped_pose_graph_estimate.txt", ios::out);
+      fout.open("/home/sriram/4D_RIS_ws/src/results/4D_RIO_results_nyu_original_clustering.txt", ios::out);
       fout << "# timestamp tx ty tz qx qy qz qw" << endl;
       fout.setf(ios::fixed, ios::floatfield);  // fixed mode，float
       fout.precision(8);  // Set precision 8
@@ -1351,4 +1354,5 @@ private:
 
 }  // namespace radar_graph_slam
 
-PLUGINLIB_EXPORT_CLASS(radar_graph_slam::RadarGraphSlamNodelet, nodelet::Nodelet)
+// PLUGINLIB_EXPORT_CLASS(radar_graph_slam::RadarGraphSlamNodelet, nodelet::Nodelet)
+PLUGINLIB_EXPORT_CLASS(rrio::RadarGraphSlamNodelet, nodelet::Nodelet)
