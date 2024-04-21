@@ -7,9 +7,9 @@
 
 4D-RIO can operate in adverse wheather. We did a experiment in which sensors are covered by dense ***Smoke***. The Lidar SLAM (R2LIVE) failed, but our 4DRadarSLAM is not affected by it, thanks to the penetration of millimeter waves to small objects such as smoke and rain.
 
-<!-- <p align='center'>
-    <img src="./doc/mapping_smoke.gif" alt="drawing" width="800"/>
-</p> -->
+<p align='center'>
+    <img src="./doc/4D_RRIO_loop1_demo.gif" alt="drawing" width="800"/>
+</p>
 
 
 ## 1. Dependency
@@ -48,7 +48,7 @@ ROS Melodic or Noetic. [ROS Installation](http://wiki.ros.org/ROS/Installation):
 The input point cloud is first downsampled by ***preprocessing_nodelet***; the radar pointcloud is transformed to Livox LiDAR frame; estimate its ego velocity and remove dynamic objects, and then passed to the next nodelets. While scan_matching_odometry_nodelet estimates the sensor pose by iteratively applying a scan matching between consecutive frames (i.e., odometry estimation). the imu_preintegration_node handles the fusion of high rate IMU data from a 9 axis VectorNav-100 IMU leveraging On-Manifold IMU-Preintegration and Graph optimization via Incremental smoothing.
 
 <div align="center">
-    <img src="doc/fig_flowchart_system.png" width = 100% >
+    <img src="doc/4D-RRIO-flowchart.png" width = 100% >
 </div>
 
 ## 3. Parameter tuning guide
@@ -71,26 +71,27 @@ Point uncertainty parameters:
 ## 4. Run the package
 Download [our recorded rosbag](https://drive.google.com/drive/folders/14jVa_dzmckVMDdfELmY32fJlKrZG1Afv?usp=sharing)  (**More datasets**: [NTU4DRadLM](https://github.com/junzhang2016/NTU4DRadLM)) and, then
 ```
-roslaunch radar_graph_slam radar_graph_slam.launch
+roslaunch radar_graph_slam radar_inertial_odometry.launch
 ```
-You'll see a point cloud like:
-<div align="center">
-    <img src="doc/fig_carpark_map.png" width = 80% >
-</div>
+
 You can choose the dataset to play at end of the launch file.
-In our paper, we did evaluation on five datasets, mapping results are presented below:
-<div align="center">
-    <img src="doc/fig_map_compare.png" width = 100% >
+In our paper, we did evaluation on two datasets, localization results are presented below:
+<div align="left">
+    <img src="doc/nyl_trajectory_top.png" width = 100% >
+</div>
+
+<div align="left">
+    <img src="doc/cp_trajectory_top.png" width = 100% >
 </div>
 
 
 
 ## 5. Evaluate the results
-In our paper, we use [rpg_trajectory_evaluation](https://github.com/uzh-rpg/rpg_trajectory_evaluation.git), the performance indices used are RE (relative error) and ATE (absolute trajectory error).
+In our paper, we use [rpg_trajectory_evaluation](https://github.com/uzh-rpg/rpg_trajectory_evaluation.git), the performance indices used are RE (relative odometry error).
 
 
 ## 7. Acknowlegement
-1. 4DRadarSLAM is based on [koide3/hdl_graph_slam](https://github.com/koide3/hdl_graph_slam) 
+1. 4DRRIO is based on [koide3/hdl_graph_slam](https://github.com/koide3/hdl_graph_slam) 
 2. [irapkaist/scancontext](https://github.com/irapkaist/scancontext) scan context
 3. [wh200720041/iscloam](https://github.com/wh200720041/iscloam) intensity scan context
 4. [christopherdoer/reve](https://github.com/christopherdoer/reve) radar ego-velocity estimator
