@@ -3,7 +3,7 @@
 
 <!-- [project (ResearchGate)](https://www.researchgate.net/publication/371309896_4DRadarSLAM_A_4D_Imaging_Radar_SLAM_System_for_Large-scale_Environments_based_on_Pose_Graph_Optimization), [IEEEXplore](https://ieeexplore.ieee.org/document/10160670), [Video](https://www.youtube.com/watch?v=Qlvs7ywA5TI), [Dataset (NTU4DRadLM)](https://github.com/junzhang2016/NTU4DRadLM) -->
 
-***4DRadarSLAM*** is an open source ROS package for real-time 6DOF SLAM using a 4D Radar and 9 axis IMU. It is based on 3D Graph SLAM with (Adaptive Probability Distribution GICP) scan matching-based radar odometry estimation, a tightly inertial fusion framwork with On manifold IMU preintegration and Incremental Graph optimization. Demonstrated a significant improvement in performance, reducing relative odometry error in translation by 14% and rotation by 26% compared to the baseline radar-only odometry methods. We extensively tested our alogithm using NTU 4D Radar-centric Multi-Modal Dataset for Localization and Mapping in outdoor structured (buildings), unstructured (trees and grasses) and semi-structured environments and Dynamic traffic scenes.
+***4DRadarSLAM*** is an open source ROS package for real-time 6DOF SLAM using a 4D Radar and 9 axis IMU. It is based on 3D Graph SLAM with (Adaptive Probability Distribution GICP) scan matching-based radar odometry estimation, a tightly inertial fusion framwork with On manifold IMU preintegration and Incremental Graph optimization. Demonstrated a significant improvement in performance, reducing relative odometry error in translation by 14% and rotation by 26% compared to the baseline radar-only odometry methods. We extensively tested our alogithm using NTU 4D Radar-centric Multi-Modal Dataset for Localization and Mapping in outdoor structured (buildings), unstructured (trees and grasses) and semi-structured environments and Dynamic traffic scenes. The yellow points represent the filtered incomming radar pcl data, the red points denote outliers and points that belong to dynamic agents/objects in the scene. the green trajectory represents the fused radar+Inertial estimated odomtery.
 
 
 <p align='center'>
@@ -68,7 +68,8 @@ Point uncertainty parameters:
 
 
 ## 4. Run the package
-Download [our recorded rosbag](https://drive.google.com/drive/folders/14jVa_dzmckVMDdfELmY32fJlKrZG1Afv?usp=sharing)  (**More datasets**: [NTU4DRadLM](https://github.com/junzhang2016/NTU4DRadLM)) and, then
+Download the loop2 dataset from [rosbag](https://drive.google.com/drive/folders/14jVa_dzmckVMDdfELmY32fJlKrZG1Afv?usp=sharing)  (**More datasets**: [NTU4DRadLM](https://github.com/junzhang2016/NTU4DRadLM)) to any folder as you wish, and then add the path to the rosbag in ***rrio_dataset_player.launch***. Then go ahead an launch this launch file below:
+
 ```
 roslaunch rrio radar_inertial_odometry.launch
 ```
