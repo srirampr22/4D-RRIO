@@ -5,7 +5,7 @@
   <node name="radar_dataset_player"
         pkg="rosbag"
         type="play"
-        args="/home/sriram/Documents/radar_dataset/loop1_2022-06-03_0.bag"
+        args="/home/sriram/Documents/radar_dataset/loop2_2022-06-03_0.bag"
         output="log">
   </node>
 
