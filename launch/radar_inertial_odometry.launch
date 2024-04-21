@@ -1,5 +1,8 @@
 <?xml version="1.0"?>
 <launch>
+  <!--- Rosbag Play the dataset -->
+  <include file="$(find rrio)/launch/rrio_dataset_player.launch" />
+
   <!-- Parameters -->
   <rosparam file="$(find rrio)/config/4DRRIO_params.yaml" command="load" />
   <param name="use_sim_time" value="true"/>
@@ -181,16 +184,9 @@
     <param name="show_sphere" value="false" />
   </node>
 
+  <!-- rrio_visualization_nodelet -->
   <node pkg="rviz" type="rviz" name="rviz_slam" args="-d $(find rrio)/rviz/4D_RIO_rviz.rviz" respawn="true"/>
 
-  <!--- Rosbag Play -->
-  <!-- <include file="$(find rrio)/launch/rosbag_play_radar_carpark1.launch" /> -->
-  <!-- <include file="$(find rrio)/launch/rosbag_play_radar_carpark3.launch" /> -->
-  <!-- <include file="$(find rrio)/launch/rosbag_play_radar_garden.launch" /> -->
-  <!-- <include file="$(find rrio)/launch/rosbag_play_radar_nanyanglink.launch" /> -->
-  <include file="$(find rrio)/launch/rosbag_play_radar_ntuloop1.launch" />
-  <!-- <include file="$(find rrio)/launch/rosbag_play_radar_ntuloop2.launch" /> -->
-  <!-- <include file="$(find rrio)/launch/rosbag_play_radar_ntuloop3.launch" /> -->
-  <!-- <include file="$(find rrio)/launch/rosbag_play_radar_smoke.launch" /> -->
+
 
 </launch>

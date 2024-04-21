@@ -1,0 +1,13 @@
+<launch>
+  <!-- Play the radar dataset rosbag -->
+  
+  <arg name="bag_file" default="/home/sriram/Documents/radar_dataset/loop2_2022-06-03_0.bag" /> <!-- the path to the rosbag file -->
+
+  <node name="radar_dataset_player"
+        pkg="rosbag"
+        type="play"
+        args="$(arg bag_file)" 
+        output="log">
+  </node>
+
+</launch>
