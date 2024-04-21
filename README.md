@@ -86,8 +86,8 @@ In our project, we did evaluation on two datasets, localization results are pres
 Results from running our alforithm on the carpark dataset:
 <table>
   <tr>
-    <td><img src="doc/cp_trajectory_top.png" width=100% ></td>
-    <td><img src="doc/cp_trans_rot_error_overall.png" width=60% ></td>
+    <td><img src="doc/cp_trajectory_top.png" alt="drawing" width="3050" ></td>
+    <td><img src="doc/cp_trans_rot_error_overall.png" alt="drawing" width="3050" height="250" ></td>
   </tr>
 </table>
 
