@@ -68,7 +68,7 @@ Point uncertainty parameters:
 
 
 ## 4. Run the package
-Download the loop2 dataset from [rosbag](https://drive.google.com/drive/folders/14jVa_dzmckVMDdfELmY32fJlKrZG1Afv?usp=sharing)  (**More datasets**: [NTU4DRadLM](https://github.com/junzhang2016/NTU4DRadLM)) to any folder as you wish, and then add the path to the rosbag in ***rrio_dataset_player.launch***. Then go ahead an launch this launch file below:
+Download the loop2 dataset from [rosbag](https://drive.google.com/drive/folders/15TiVj-LjzKKCrxYKv0o0kJlwFca0GI7C?usp=sharing)  (**More datasets**: [NTU4DRadLM](https://github.com/junzhang2016/NTU4DRadLM)) to any folder as you wish, and then add the path to the rosbag in ***rrio_dataset_player.launch***. Then go ahead an launch this launch file below:
 
 ```
 roslaunch rrio radar_inertial_odometry.launch
@@ -76,13 +76,20 @@ roslaunch rrio radar_inertial_odometry.launch
 
 You can choose the dataset to play at end of the launch file.
 In our project, we did evaluation on two datasets, localization results are presented below:
-<div align="centre">
+<!-- <div align="centre">
     <img src="doc/cp_trajectory_top.png" width = 50% >
 </div>
 
 <div align="centre">
     <img src="doc/cp_trans_rot_error_overall.png" width = 50% >
-</div>
+</div> -->
+Results from running our alforithm on the carpark dataset:
+<table>
+  <tr>
+    <td><img src="doc/cp_trajectory_top.png" width=100% ></td>
+    <td><img src="doc/cp_trans_rot_error_overall.png" width=60% ></td>
+  </tr>
+</table>
 
 ## 5. Evaluate the results
 In our project, we use [rpg_trajectory_evaluation](https://github.com/uzh-rpg/rpg_trajectory_evaluation.git), the performance indices used are RE (relative odometry error).
